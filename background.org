@@ -1,0 +1,161 @@
+* Preamble :noexport:
+#+TITLE:     Clojure DbC: Background
+#+AUTHOR:    Giles Chamberlin
+#+OPTIONS:   H:2 num:t toc:nil \n:nil @:t ::t |:t ^:nil -:t f:t *:t <:t
+#+OPTIONS:   TeX:t LaTeX:t skip:nil d:nil todo:t pri:nil tags:not-in-toc
+#+LaTeX_CLASS_OPTIONS: [a4paper, 12pt] 
+#+LATEX_HEADER: \usepackage{parskip} \usepackage{times} \usepackage{listings}
+
+#+BEGIN_LaTeX
+\bibliographystyle{plain}
+\hypersetup{
+    colorlinks,%
+    citecolor=black,%
+    filecolor=black,%
+    linkcolor=black,%
+    urlcolor=black}
+#+END_setq
+
+
+* TODO Refining listings 					   :noexport:
+(LaTeX org-export-latex-listings t)
+and 
+org-export-latex-listings-options in a feb checkout of org-mode to
+refine the layout.
+
+
+* Clojure
+
+Clojure is a Lisp dialect running on the Java Virtual Machine (JVM).
+Primarily a functional language, Clojure uses Software Transactional
+Memory (STM) \cite{foo} to provide thread safe state changes. As with
+other Lisps, a powerful macro system is present.  This allows Clojure
+code to be treated as data.  Whilst the deep internals of Clojure are
+written in Java, the majority of the language is written in terms of
+itself.  For example =defn=, the symbol usually used to introduce a
+function definition, is written in terms of =fn=.
+
+A typical use of =defn= would be:
+
+#+begin_src clojure  
+  (defn unchecked-java-sqrt
+    "Return the square root of n, calling the underlying 
+     Java implementation"
+    [n]
+    (Math/sqrt n))
+#+end_src
+
+
+
+Anonymous functions may be introduced with =fn=.  
+
+#+begin_src clojure
+(fn [n] (+ 3 n))
+#+end_src
+
+
+=fn= itself, the core of a function definition, provides support for
+condition checking through meta data.   Since Clojure 1.1 =fn= is
+defined (http://clojure.org/special_forms#fn) as:
+
+
+#+begin_src clojure
+(fn name? [params* ] condition-map? exprs*)
+(fn name? ([params* ] condition-map? exprs*)+)
+#+end_src
+
+
+Where the optional condition-map parameter may contain keys for pre
+and post conditions associated with a vector of assertion expressions.
+
+
+#+begin_example
+{:pre [pre-expr*]
+ :post [post-expr*]}
+#+end_example
+
+This provides basic condition checking, allowing us to define a new
+version of =java-sqrt=
+
+
+#+begin_src clojure
+  (defn checked-java-sqrt 
+    "Precondition checks prior to calling underlying function"
+    [n]
+    {:pre [(number? n) (>= n 0)]}
+    (Math/sqrt n))
+#+end_src
+
+
+#+results:
+| function | user/checked-java-sqrt |
+
+Should the pre-condition be violated, a Java =AssertionError=
+exception will be thrown which can be handled in Clojure in the normal
+manner:
+
+
+#+begin_src clojure 
+(try (print (checked-java-sqrt -1))
+       (catch AssertionError e
+         (.getMessage e)))
+#+end_src
+
+
+Will return:
+
+#+results:
+: Assert failed: (>= n 0)
+
+
+** Anatomy of a clojure precondition
+
+# This doesn't belong in the background section but should form 
+# part of our design.
+
+#+begin_src clojure
+ (macroexpand '(defn checked-java-sqrt 
+    "Precondition checks prior to calling underlying function"
+    [n]
+    {:pre [(number? n) (>= n 0)]}
+    (Math/sqrt n))) 
+#+end_src
+
+Macro expansion, prior to compilation, wraps the body of the =defn= in
+assertions validating the pre and post conditions.  It is this
+augmented body which is compiled to form the function. 
+
+Omitting meta data, macro expansion of =checked-java-sqrt= yields:
+#+begin_src clojure
+(fn* checked-java-sqrt 
+     ([n]
+	(clojure.core/assert (number? n))
+	(clojure.core/assert (number? n))
+	(Math/sqrt n))
+#+end_src
+The demotion of the conditions to generalised assertions loses the
+ability to extract the conditions for use in Eiffel style short form
+descriptions.
+
+
+
+* TODO PLT Scheme
+
+http://docs.racket-lang.org/guide/contracts.html
+
+contracts separated from the function definition in module exports
+section. Needed as contracts are enforced at calls between modules
+only and (they claim) classes can flow over those boundary.
+
+
+Introduces the concept of =any= and =any/c=.  Can be used to state that any
+integer can be returned etc. 
+
+Contract definitions in terms of range and domain rather than predicates.
+
+Separation of contracts on structures from contracts on functions.
+
+
+# High order contracts described in
+# file:./papers/contracts-as-projections.pdf
+

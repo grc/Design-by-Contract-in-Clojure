@@ -1,0 +1,296 @@
+* Preamble :noexport:
+#+TITLE:     Design and Implementation of a Design by Contract Framework in Clojure
+#+AUTHOR:    Giles Chamberlin
+#+OPTIONS:   H:2 num:t toc:nil \n:nil @:t ::t |:t ^:nil -:t f:t *:t <:t
+#+OPTIONS:   TeX:t LaTeX:t skip:nil d:nil todo:t pri:nil tags:not-in-toc
+#+LaTeX_CLASS_OPTIONS: [a4paper, 12pt] 
+#+LATEX_HEADER: \usepackage{parskip} \usepackage{times} 
+
+#+BEGIN_LaTeX
+\bibliographystyle{plain}
+\hypersetup{
+    colorlinks,%
+    citecolor=black,%
+    filecolor=black,%
+    linkcolor=black,%
+    urlcolor=black}
+#+END_LaTeX
+
+
+
+* Abstract
+
+Design by Contract, a term coined by Bertrand Meyer, provides a means
+of specifying the behaviour of a function separately from its
+implementation. This approach has been taken up by a number of other
+programming languages with varied success.  
+
+This project aims to implement a Design by Contract Framework for
+Clojure, a lisp based language.
+
+
+* Area of study
+
+Clojure is a recent addition to the Lisp family of languages. Running
+on the JVM it can interact easily with Java.  Aimed at multi-core
+architectures it uses functional techniques and immutable data to
+facilitate multi-threading.  Mutability is implemented within a
+Software Transactional Memory environment: mutations outside
+transactions are not allowed.
+
+Although design by contract has not taken off to the extent envisioned
+by Bertrand Meyer, it is still an active area of research. We
+initially review the literature for approaches to Runtime Assertion
+Checking and Design by Contract.  From this review we will determine
+which features would be desirable in a Clojure implementation.
+
+As the original source of Design by Contract, the approach taken by
+Eiffel will be a significant influence. In particular the approach to
+inheritance and conditions.
+
+One of the inspirations for this piece of work was a frustration with
+JML.  Endeavouring to write contract specifications in the comments of
+a language for later extraction lengthens the coding cycle and removes
+tools such as syntax highlighting and code completion from the
+programmer's toolbox.  In addition, quirks of the JML implementation
+caused unexpected errors.  Surely there is a better way?
+
+Work on Design by Contract in functional languages such as Haskell
+highlight the different issues which arise when functions are first
+class objects.
+
+Clojure 1.2 provides minimal support for pre- and post-condition
+checking: meta data may be attached to a function defining pre and
+post conditions which are checked through the assertion mechanism.
+The project will investigate limitations of this approach and seek to
+extend the framework to provide robust support for Design by Contract.
+
+Working in Clojure, as in other Lisps, it is possible to extend the
+underlying definition of the core language with few limitations:
+=defn=, the form typically used to introduce a new function, is itself
+just a macro based on =fn=.  A newly defined =def-contract= can in
+turn build on =defn=.
+
+Clojure supports a number of programming paradigms which extend the
+conditions under which DbC might be used.  The presence of
+multi-methods, able to dispatch on the type of all of their arguments
+will extend the inheritance model of pre and post conditions.
+The easy interaction of Clojure and Java, together with the presence
+of a significant number of Clojure libraries, means that we need a
+means of combining both checked and unchecked function calls.
+
+One of the key aspects of DbC is the documentation of the contract in
+a readily identifiable format: Eiffel's =short= tool will extract the
+pre- and post-conditions as part of the function documentation. (OOSC
+Ch 11.13).  
+
+A Clojure Design by Contract framework should allow the programmer to
+interrogate a function for its contracts in a simple manner, providing
+extended documentation.
+
+Static contract checking: formal reasoning about whether or not a
+program's contracts can hold, is out of scope for this project.
+
+
+
+* Proposed Work
+
+** Literature review
+
+Examine other approaches to Design by Contract and Runtime Assertion
+Checking, evaluating the strengths and weaknesses of each.
+
+Approaches identified to date:
+ - Eiffel
+ - JML
+ - PLT Scheme
+ - D \cite{D}
+   (http://www.digitalmars.com/d/2.0/cppdbc.html)(
+ - Haskell 
+
+
+
+** Current state of Clojure
+
+Give a brief description of Clojure and in  particular the contract support
+already in place. Survey of open source clojure projects highlighting
+where (if anywhere) the current framework is used.  Compare with the
+usage of standardised unit test frameworks.
+
+=clojure-contrib= currently has one =:pre= check in 27,000 lines of
+code. Compare this with 41 asserts.  Obviously not popular.  What's
+the barrier to uptake?
+
+
+** Design criteria
+
+Following on from the literature review, we will determine the
+features that we wish to include in our framework.
+
+
+Current goals include:
+
+- Usability: It must be simple to integrate contracts into the normal
+  flow of work.  Reports of contract violations must be readily
+  understandable and indicate the location clearly.
+
+- High Order Functions: Given the functional nature of Clojure, how
+  will the framework handle HOFs?  What specific problems are
+  introduced?
+
+- Effect of lazy sequence evaluation on the detection of contract
+  violations.
+
+- Interaction with the uncontracted world: Java or just other Clojure
+  libraries.
+
+- Liskov Substitution Principle: Though rare, inheritance is supported
+  and so the framework should also support this style of programming.
+  The presence of multi-methods may over complicate this area so will
+  be examined only if time allows.
+
+** Framework implementation
+
+Describe the implementation of the framework, highlighting design
+decisions.  Include code snippets where they prove interesting.
+
+** Demonstration of usage
+
+Write a tutorial style introduction to the usage of the framework.
+This will be based on a short multi-threaded application and
+instrumented  with the DbC framework, demonstrating the utility of the
+solution.  The demonstration application will probably be based on the
+Banking example used in the SRO assignment.  Comparison with my JML
+submission may also be productive.
+
+* Plan of work
+
+** Background
+
+Target 1st draft: 5 April
+
+Literature review and introduction to Clojure.
+
+** Design Goals
+
+Target 1st draft: 3 May
+
+Based on the literature review, formulate a set of design goals
+describing  the intent of the DbC framework.
+
+** Coding & Implementation writeup
+
+The core of the dissertation: write up the design of the framework.  
+
+Target: 
+
+- Partial implementation: 6 June
+- Draft writeup: 24 June
+# Erlang course at end of June: allow for assignment
+- Complete implementation & Example useage: 5 Sept
+- Draft writeup: 3 Oct
+
+
+
+** Dissertation top and tailing
+
+Target: Complete 1st draft: 1 Nov
+
+Work on the abstract, introduction and conclusions.
+
+** Review and rewrite
+
+Target: 5 December
+
+Put the dissertation aside for a week then review with an eye to
+presentation rather than to just getting the information down.
+
+
+
+\bibliography{proposal}{}
+
+
+* Notes to date 						   :noexport:
+
+
+** pre and posot stuff
+
+http://groups.google.com/group/clojure-dev/browse_thread/thread/cac8a9139011645f
+
+
+Tail call optimisation and post conditions in section 8 file:./papers/ho-contracts-techreport.pdf
+
+** pure
+
+Don't forget to add the musings on =pure=.
+** TDD vs DbC
+
+[[http://gleichmann.wordpress.com/2007/12/09/test-driven-development-and-design-by-contract-friend-or-foe/][blog post]]
+
+[[file:/Users/gilecham/oxford/dbc/literature/cdd_leitner_esec_fse_2007.pdf][Meyer paper]]
+
+
+[[http://docs.racket-lang.org/guide/contract-boundaries.html][PLT Scheme]]'s support for contracts.
+
+
+** Clojure stuff
+
+clojure-contrib/repl-utils was I think where the find source stuff was
+hiding
+
+** readable preconditions
+
+email on clojurelist:
+
+From: Hubert Iwaniuk <neotyk@kungfoo.pl>
+Subject: Re: better error messages > smaller stack traces
+Newsgroups: gmane.comp.java.clojure.user
+To: clojure@googlegroups.com
+Date: Thu, 10 Feb 2011 21:23:55 +0100
+Reply-To: clojure@googlegroups.com
+
+Hi,
+
+Jeff correct me if I'm wrong but I think you are after something along the following lines.
+Instead:
+(defn f [x] {:pre [(some-fancy-validation x)]} ..)
+
+To have something like this:
+(defn f [x] {:pre [^{:msg "here goes description of what has not been
+valid"} (some-fancy-validation x)]} ..)
+
+It could turn precondition to a bit more user-friendly construct.
+
+I would also like to have assert-args public.
+
+** style notes
+
+- avoid footnotes
+
+- capitalise Section X in cross reference  
+
+- first person plural in body, "we explore ..."
+** Books to look up: 
+- Functional Pearls
+- Towards a ... of quantum gravity, hoax
+
+** Websites
+
+- functionaljobs.com
+
+- JML http://www.eecs.ucf.edu/~leavens/JML/
+
+
+   
+
+
+   Scheme Robbie Findler Matthias Blume
+
+
+Invariants and rentrancy?
+
+What about Tail calls? Mentioned in §3.2.3 file:./papers/dls10-sf.pdf
+
+LSP paper: Barbara H. Liskov and Jeannette M. Wing. A behavioral
+notion of subtyping. ACM Transactions on Programming Languages and
+Systems, 16(6):1811–1841, November 1994.
