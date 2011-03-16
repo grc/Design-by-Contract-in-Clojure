@@ -138,6 +138,8 @@ ability to extract the conditions for use in Eiffel style short form
 descriptions.
 
 
+** TODO Mutable date
+Expand on verify methods attached to mutable data.
 
 * TODO PLT Scheme
 
