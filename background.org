@@ -130,7 +130,7 @@ Omitting meta data, macro expansion of =checked-java-sqrt= yields:
 (fn* checked-java-sqrt 
      ([n]
 	(clojure.core/assert (number? n))
-	(clojure.core/assert (number? n))
+	(clojure.core/assert (>= n 0))
 	(Math/sqrt n))
 #+end_src
 The demotion of the conditions to generalised assertions loses the
