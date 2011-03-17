@@ -4,7 +4,7 @@
 #+OPTIONS:   H:2 num:t toc:nil \n:nil @:t ::t |:t ^:nil -:t f:t *:t <:t
 #+OPTIONS:   TeX:t LaTeX:t skip:nil d:nil todo:t pri:nil tags:not-in-toc
 #+LaTeX_CLASS_OPTIONS: [a4paper, 12pt] 
-#+LATEX_HEADER: \usepackage{parskip} \usepackage{times} \usepackage{listings}
+#+LATEX_HEADER: \usepackage{parskip} \usepackage{times} \usepackage{listings} \usepackage{cite}
 
 #+BEGIN_LaTeX
 \bibliographystyle{plain}
@@ -14,7 +14,7 @@
     filecolor=black,%
     linkcolor=black,%
     urlcolor=black}
-#+END_setq
+#+END_LaTeX
 
 
 * TODO Refining listings 					   :noexport:
@@ -26,9 +26,9 @@ refine the layout.
 
 * Clojure
 
-Clojure is a Lisp dialect running on the Java Virtual Machine (JVM).
+Clojure \cite{clojure} is a Lisp dialect running on the Java Virtual Machine (JVM).
 Primarily a functional language, Clojure uses Software Transactional
-Memory (STM) \cite{foo} to provide thread safe state changes. As with
+Memory (STM) to provide thread safe state changes. As with
 other Lisps, a powerful macro system is present.  This allows Clojure
 code to be treated as data.  Whilst the deep internals of Clojure are
 written in Java, the majority of the language is written in terms of
@@ -45,8 +45,6 @@ A typical use of =defn= would be:
     (Math/sqrt n))
 #+end_src
 
-
-
 Anonymous functions may be introduced with =fn=.  
 
 #+begin_src clojure
@@ -56,7 +54,7 @@ Anonymous functions may be introduced with =fn=.
 
 =fn= itself, the core of a function definition, provides support for
 condition checking through meta data.   Since Clojure 1.1 =fn= is
-defined (http://clojure.org/special_forms#fn) as:
+defined \cite{clojure.fn} as:
 
 
 #+begin_src clojure
@@ -138,16 +136,19 @@ ability to extract the conditions for use in Eiffel style short form
 descriptions.
 
 
+\bibliographystyle{plain}
+\bibliography{dbc}
+
 ** TODO Mutable date
 Expand on verify methods attached to mutable data.
 
-* TODO PLT Scheme
+* Racket
 
-http://docs.racket-lang.org/guide/contracts.html
-
-contracts separated from the function definition in module exports
-section. Needed as contracts are enforced at calls between modules
-only and (they claim) classes can flow over those boundary.
+Previously known as PLT Scheme, Racket has taken on the idea of
+contracts. Contracts in Racket are separated from the function
+definition in a module exports section \cite{racket}. Needed as
+contracts are enforced at calls between modules only and (they claim)
+classes can flow over those boundary.
 
 
 Introduces the concept of =any= and =any/c=.  Can be used to state that any
