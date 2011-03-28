@@ -24,6 +24,91 @@ org-export-latex-listings-options in a feb checkout of org-mode to
 refine the layout.
 
 
+
+* Eiffel
+
+Meyer's book "Object Oriented Software Construction" \cite{OOSC}
+introduced Design by Contract to much of the software engineering
+community.  The key concepts were the use of pre and post conditions
+with blame assigned to the calling or called function depending upon
+which condition was violated.  Inheritance and the Liskov Substitution
+Principle \cite{lsp} are supported through the respective
+strengthening and weakening of pre and post conditions in derived
+classes.
+
+Eiffel assertions are primarily restricted in practice to simple
+checks on field and parameter values.  Function calls are permitted
+though Meyer argues (p402) that such functions should be kept simple
+and "beyond reproach".
+
+* JML
+
+
+JML \cite{jml} provides a Design by Contract framework for Java.  Much
+of the functionality is similar to that introduced in Eiffel: pre and
+post conditions are provided for class methods and the Liskov
+Substitution Principle \cite{lsp} is supported through the respective
+strengthening and weakening of those pre and post conditions. 
+
+An unusual aspect of JML, in contrast to Eiffel, is its support for
+model based specification. Data, albeit meta-data, may be modified in
+a contract. This is in contrast to the assertion mechanisms of the C
+family of languages where assertions should never have side effects.
+The intent is to provide a meta-data model of the underlying
+implementation.  Contract conditions may then adjust this meta-data
+model to track what should be happening in the implementation.
+
+# discussion of side effects in pre on #clojure: use of print
+# statements for debugging ...
+
+JML is written in terms of JML annotations embedded in the comments of
+the Java program.
+
+
+* Contracts for higher order functions
+
+Although the absence of high order contracts has been picked up by the
+functional community, it is also of significance in the procedural and
+object oriented communities.  Even in C, function pointers can be passed so it
+could be advantageous to attache a contract to those functions.  In OO
+paradigms, patterns such as the Command Object \cite{GoF} allow a
+closure to be passed to a method for later processing; again a
+candidate for high order contract checking.
+
+
+* Racket
+
+Previously known as PLT Scheme, Racket has taken on the idea of
+contracts. Contracts in Racket are separated from the function
+definition in a module exports section \cite{racket}. This allows
+contracts to be enforced only at module boundaries.  Calls to a
+function within the module do not undergo contract checking.  This
+follows the premise of Eiffel (p 366).
+
+
+introduces the concept of =any= and =any/c=.  Can be used to state that any
+integer can be returned etc. 
+
+
+From \cite{racket}: "Contracts are either simple predicates or function
+contracts.  Function contracts, in turn, consist of a pair of
+contracts [...] one for the domain of the function and one for the
+range of the function."
+
+Findler and Felleisen introduce the idea that high order contracts
+cannot be enforced until some function consumes or produces only first
+order values.
+
+Contract definitions in terms of range and domain rather than predicates.
+
+Separation of contracts on structures from contracts on functions.
+
+
+# High order contracts described in
+# file:./papers/contracts-as-projections.pdf
+
+
+
 * Clojure
 
 Clojure \cite{clojure} is a Lisp dialect running on the Java Virtual Machine (JVM).
@@ -37,6 +122,7 @@ function definition, is written in terms of =fn=.
 
 A typical use of =defn= would be:
 
+#+srcname:unchecked-java-sqrt
 #+begin_src clojure  
   (defn unchecked-java-sqrt
     "Return the square root of n, calling the underlying 
@@ -76,6 +162,7 @@ This provides basic condition checking, allowing us to define a new
 version of =java-sqrt=
 
 
+#+srcname: checked-java-sqrt
 #+begin_src clojure
   (defn checked-java-sqrt 
     "Precondition checks prior to calling underlying function"
@@ -104,6 +191,14 @@ Will return:
 
 #+results:
 : Assert failed: (>= n 0)
+
+
+#+srcname: contracts
+#+begin_src clojure :tangle hello.clj :exports none :noweb yes
+  <<unchecked-java-sqrt>>
+
+  <<checked-java-sqrt>>
+#+end_src
 
 
 ** Anatomy of a clojure precondition
@@ -141,24 +236,3 @@ descriptions.
 
 ** TODO Mutable date
 Expand on verify methods attached to mutable data.
-
-* Racket
-
-Previously known as PLT Scheme, Racket has taken on the idea of
-contracts. Contracts in Racket are separated from the function
-definition in a module exports section \cite{racket}. Needed as
-contracts are enforced at calls between modules only and (they claim)
-classes can flow over those boundary.
-
-
-Introduces the concept of =any= and =any/c=.  Can be used to state that any
-integer can be returned etc. 
-
-Contract definitions in terms of range and domain rather than predicates.
-
-Separation of contracts on structures from contracts on functions.
-
-
-# High order contracts described in
-# file:./papers/contracts-as-projections.pdf
-
