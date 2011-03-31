@@ -32,7 +32,7 @@ introduced Design by Contract to much of the software engineering
 community.  The key concepts were the use of pre and post conditions
 with blame assigned to the calling or called function depending upon
 which condition was violated.  Inheritance and the Liskov Substitution
-Principle \cite{lsp} are supported through the respective
+Principle (LSP) \cite{lsp} are supported through the respective
 strengthening and weakening of pre and post conditions in derived
 classes.
 
@@ -41,28 +41,45 @@ checks on field and parameter values.  Function calls are permitted
 though Meyer argues (p402) that such functions should be kept simple
 and "beyond reproach".
 
+With Meyer's strongly object oriented approach, contracts are enforced
+when calling the public methods of an object. Calls internal to an
+object do not invoke the contracts or trigger invariant checks.
+
+
 * JML
 
 
 JML \cite{jml} provides a Design by Contract framework for Java.  Much
 of the functionality is similar to that introduced in Eiffel: pre and
-post conditions are provided for class methods and the Liskov
-Substitution Principle \cite{lsp} is supported through the respective
-strengthening and weakening of those pre and post conditions. 
+post conditions are provided for class methods and the LSP is
+supported through the respective strengthening and weakening of those
+pre and post conditions.
+
+JML is written in terms of JML annotations embedded in the comments of
+the Java program.  These comments are then processed by =jmlc= which
+generates a wrapper class to enforce the contract and delegate the
+implementation to the native java code.  The use of annotated comments
+simplifies the implementation of =jmlc=: it just has to pre-process the
+annotations and generate legal java which is then compiled as usual.
+Unfortunately it has the disadvantage that the usual productivity
+tools associated with a modern development environment: syntax
+highlighting, auto-completion etc are no longer available. 
 
 An unusual aspect of JML, in contrast to Eiffel, is its support for
-model based specification. Data, albeit meta-data, may be modified in
-a contract. This is in contrast to the assertion mechanisms of the C
-family of languages where assertions should never have side effects.
-The intent is to provide a meta-data model of the underlying
-implementation.  Contract conditions may then adjust this meta-data
-model to track what should be happening in the implementation.
+model based specification. An abstract model of the system is
+constructed in the JML annotations and its representation checked
+against that of the underlying implementation. Data, albeit meta-data,
+may be modified in a contract. This is in contrast to the assertion
+mechanisms of the C family of languages where assertions should never
+have side effects.  The intent is to provide a meta-data model of the
+underlying implementation.  Contract conditions may then adjust this
+meta-data model to track what should be happening in the
+implementation.
 
 # discussion of side effects in pre on #clojure: use of print
 # statements for debugging ...
 
-JML is written in terms of JML annotations embedded in the comments of
-the Java program.
+
 
 
 * Contracts for higher order functions
