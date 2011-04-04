@@ -4,7 +4,7 @@
 #+OPTIONS:   TeX:t LaTeX:t skip:nil d:nil todo:t pri:nil tags:not-in-toc
 #+LaTeX_CLASS_OPTIONS: [a4paper, 12pt] 
 #+LATEX_HEADER: \usepackage{parskip} \usepackage{times} \usepackage{listings} \usepackage{cite}
-#+LATEX_HEADER: \usepackage{hyperref}
+#+LATEX_HEADER: \usepackage[a4paper=true, pagebackref=true]{hyperref}
 
 \hypersetup{
     colorlinks,%
@@ -15,32 +15,43 @@
 
 
 
+* A background to Design by Contract
 
 
+There is a long history \cite{historical} to the use of assertions to
+improve program reliability.  Originally introduced to support formal
+reasoning about the state of the program, there has been significant
+uptake amongst practising software engineers 
 
-* Eiffel
+** Eiffel
 
 Meyer's book "Object Oriented Software Construction" \cite{OOSC}
 introduced Design by Contract to much of the software engineering
-community.  The key concepts were the use of pre and post conditions
-with blame assigned to the calling or called function depending upon
-which condition was violated.  Inheritance and the Liskov Substitution
-Principle (LSP) \cite{lsp} are supported through the respective
-strengthening and weakening of pre and post conditions in derived
-classes.
+community.  In the book, Meyer lays out his views of how to develop
+robust software and in the process introduces a new object oriented
+language which embodies those design principles. One of the key concepts
+was the use of pre and post conditions to provide a contract between
+the caller and provider of a method.  In the event of contract
+violation blame could be assigned  depending upon which condition was
+violated.  
 
-Eiffel assertions are primarily restricted in practice to simple
-checks on field and parameter values.  Function calls are permitted
-though Meyer argues (p402) that such functions should be kept simple
-and "beyond reproach".
+Inheritance and the Liskov Substitution Principle (LSP) \cite{lsp} are
+supported through the respective strengthening and weakening of pre
+and post conditions in derived classes.
+
+Eiffel contracts are implemented in terms of assertions, similar to
+those found in the C family of languages. In practice Eiffel
+assertions are generally restricted to simple checks on field and
+parameter values.  Function calls are permitted though Meyer argues
+(p402) that such functions should be kept simple and "beyond
+reproach".
 
 With Meyer's strongly object oriented approach, contracts are enforced
 when calling the public methods of an object. Calls internal to an
 object do not invoke the contracts or trigger invariant checks.
 
 
-* JML
-
+** JML
 
 JML \cite{jml} provides a Design by Contract framework for Java.  Much
 of the functionality is similar to that introduced in Eiffel: pre and
@@ -240,7 +251,7 @@ descriptions.
 
 
 
-** Mutable date
+** Mutable data
 
 Clojure provides support for mutable data through the use of
 transactional reference =ref='s.  Modifications to the data must be
