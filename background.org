@@ -1,27 +1,20 @@
-* Preamble :noexport:
 #+TITLE:     Clojure DbC: Background
 #+AUTHOR:    Giles Chamberlin
 #+OPTIONS:   H:2 num:t toc:nil \n:nil @:t ::t |:t ^:nil -:t f:t *:t <:t
 #+OPTIONS:   TeX:t LaTeX:t skip:nil d:nil todo:t pri:nil tags:not-in-toc
 #+LaTeX_CLASS_OPTIONS: [a4paper, 12pt] 
 #+LATEX_HEADER: \usepackage{parskip} \usepackage{times} \usepackage{listings} \usepackage{cite}
+#+LATEX_HEADER: \usepackage{hyperref}
 
-#+BEGIN_LaTeX
-\bibliographystyle{plain}
 \hypersetup{
     colorlinks,%
     citecolor=black,%
     filecolor=black,%
     linkcolor=black,%
     urlcolor=black}
-#+END_LaTeX
 
 
-* TODO Refining listings 					   :noexport:
-(LaTeX org-export-latex-listings t)
-and 
-org-export-latex-listings-options in a feb checkout of org-mode to
-refine the layout.
+
 
 
 
@@ -220,9 +213,6 @@ Will return:
 
 ** Anatomy of a clojure precondition
 
-# This doesn't belong in the background section but should form 
-# part of our design.
-
 #+begin_src clojure
  (macroexpand '(defn checked-java-sqrt 
     "Precondition checks prior to calling underlying function"
@@ -248,8 +238,15 @@ ability to extract the conditions for use in Eiffel style short form
 descriptions.
 
 
+
+
+** Mutable date
+
+Clojure provides support for mutable data through the use of
+transactional reference =ref='s.  Modifications to the data must be
+wrapped in a transaction and may be protected by a validator
+function.
+
+
 \bibliographystyle{plain}
 \bibliography{dbc}
-
-** TODO Mutable date
-Expand on verify methods attached to mutable data.
