@@ -4,7 +4,7 @@
 #+OPTIONS:   TeX:t LaTeX:t skip:nil d:nil todo:t pri:nil tags:not-in-toc
 #+LaTeX_CLASS_OPTIONS: [a4paper, 12pt] 
 #+LATEX_HEADER: \usepackage{parskip} \usepackage{times} \usepackage{listings} \usepackage{cite}
-#+LATEX_HEADER: \usepackage[a4paper=true, pagebackref=true]{hyperref}
+#+LATEX_HEADER: \usepackage{hyperref}
 
 \hypersetup{
     colorlinks,%
@@ -21,7 +21,18 @@
 There is a long history \cite{historical} to the use of assertions to
 improve program reliability.  Originally introduced to support formal
 reasoning about the state of the program, there has been significant
-uptake amongst practising software engineers 
+uptake amongst practising software engineers beginning with Parnas'
+description of software module specification \cite{Parnas}.  The
+current state of the art is such that assertions are frequently used
+for pragmatic reasons but rarely to formally prove the program
+\cite{Hoare}. 
+
+In this section we consider the use of run time assertion checking
+systems in a number of languages.  Our intent is to use this
+discussion to ascertain the important features of such a system which
+may then be used as the basis of the requirements of a similar system
+for Clojure.
+
 
 ** Eiffel
 
@@ -49,6 +60,12 @@ reproach".
 With Meyer's strongly object oriented approach, contracts are enforced
 when calling the public methods of an object. Calls internal to an
 object do not invoke the contracts or trigger invariant checks.
+
+In line with Parnas' assertion that contracts should be readily
+available to the developer, Meyer provides a tool which generates a
+short form of his class descriptions; essentially an interface
+specification.  This short form includes the pre and post conditions.
+
 
 
 ** JML
@@ -79,6 +96,10 @@ have side effects.  The intent is to provide a meta-data model of the
 underlying implementation.  Contract conditions may then adjust this
 meta-data model to track what should be happening in the
 implementation.
+
+\textit{TODO: I would like to spend some more time investigating the
+similarities and differences between Design by Contract and Larch's
+model based specifications.}
 
 # discussion of side effects in pre on #clojure: use of print
 # statements for debugging ...
