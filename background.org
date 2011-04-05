@@ -108,6 +108,11 @@ model based specifications.}
 
 
 * Contracts for higher order functions
+The simple parameter and return value checking that follows from
+Parnas' work has proved useful in the procedural world.  It's utility
+is severely reduced in functional programming paradigms where
+functions are passed around as first class objects.  
+
 
 Although the absence of high order contracts has been picked up by the
 functional community, it is also of significance in the procedural and
