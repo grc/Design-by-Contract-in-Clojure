@@ -1,5 +1,5 @@
 * Preamble :noexport:
-#+TITLE:     Design and Implementation of a Design by Contract Framework in Clojure
+#+TITLE:     Proposal: Design by contract in Clojure
 #+AUTHOR:    Giles Chamberlin
 #+OPTIONS:   H:2 num:t toc:nil \n:nil @:t ::t |:t ^:nil -:t f:t *:t <:t
 #+OPTIONS:   TeX:t LaTeX:t skip:nil d:nil todo:t pri:nil tags:not-in-toc
@@ -20,10 +20,10 @@
 
 * Abstract
 
-Design by Contract, a term coined by Bertrand Meyer, provides a means
-of specifying the behaviour of a function separately from its
-implementation. This approach has been taken up by a number of other
-programming languages with varied success.  
+Design by Contract, provides a means of specifying the behaviour of a
+function separately from its implementation. This approach has been
+taken up by a number of other programming languages with varied
+success.
 
 This project aims to implement a Design by Contract Framework for
 Clojure, a lisp based language.
@@ -55,9 +55,9 @@ tools such as syntax highlighting and code completion from the
 programmer's toolbox.  In addition, quirks of the JML implementation
 caused unexpected errors.  Surely there is a better way?
 
-Work on Design by Contract in functional languages such as Haskell
-highlight the different issues which arise when functions are first
-class objects.
+Work on Design by Contract in functional languages such as Racket and
+Haskell highlight the different issues which arise when functions are
+first class objects.
 
 Clojure 1.2 provides minimal support for pre- and post-condition
 checking: meta data may be attached to a function defining pre and
@@ -108,7 +108,7 @@ Approaches identified to date:
    (http://www.digitalmars.com/d/2.0/cppdbc.html)(
  - Haskell 
 
-
+   
 
 ** Current state of Clojure
 
@@ -157,11 +157,9 @@ decisions.  Include code snippets where they prove interesting.
 ** Demonstration of usage
 
 Write a tutorial style introduction to the usage of the framework.
-This will be based on a short multi-threaded application and
-instrumented  with the DbC framework, demonstrating the utility of the
-solution.  The demonstration application will probably be based on the
-Banking example used in the SRO assignment.  Comparison with my JML
-submission may also be productive.
+This will be based on a small application instrumented with the DbC
+framework. The intent will be to demonstrate the utility of the
+solution.  
 
 * Plan of work
 
@@ -185,12 +183,10 @@ The core of the dissertation: write up the design of the framework.
 Target: 
 
 - Partial implementation: 6 June
-- Draft writeup: 24 June
-# Erlang course at end of June: allow for assignment
+- Draft writeup: 24 June ( Erlang course at end of June: allow for
+  assignment)
 - Complete implementation & Example useage: 5 Sept
 - Draft writeup: 3 Oct
-
-
 
 ** Dissertation top and tailing
 
@@ -207,7 +203,6 @@ presentation rather than to just getting the information down.
 
 
 
-\bibliography{proposal}{}
 
 
 * Notes to date 						   :noexport:

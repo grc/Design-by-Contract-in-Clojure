@@ -4,7 +4,7 @@
 #+OPTIONS:   TeX:t LaTeX:t skip:nil d:nil todo:t pri:nil tags:not-in-toc
 #+LaTeX_CLASS_OPTIONS: [a4paper, 12pt] 
 #+LATEX_HEADER: \usepackage{parskip} \usepackage{times} \usepackage{listings} \usepackage{cite}
-#+LATEX_HEADER: \usepackage{hyperref}
+#+LATEX_HEADER: \usepackage{hyperref} 
 
 \hypersetup{
     colorlinks,%
@@ -36,30 +36,31 @@ for Clojure.
 
 ** Eiffel
 
-Meyer's book "Object Oriented Software Construction" \cite{OOSC}
+Meyer's book "Object Oriented Software Construction" \cite{oosc}
 introduced Design by Contract to much of the software engineering
-community.  In the book, Meyer lays out his views of how to develop
+community.  In his book, Meyer lays out his views of how to develop
 robust software and in the process introduces a new object oriented
-language which embodies those design principles. One of the key concepts
-was the use of pre and post conditions to provide a contract between
-the caller and provider of a method.  In the event of contract
-violation blame could be assigned  depending upon which condition was
-violated.  
+language, Eiffel, which embodies those design principles. One of the
+key concepts is the use of pre and post conditions to provide a
+contract between the caller and provider of a method.  In the event of
+contract violation blame is then assigned depending upon which
+condition was violated.
 
 Inheritance and the Liskov Substitution Principle (LSP) \cite{lsp} are
 supported through the respective strengthening and weakening of pre
-and post conditions in derived classes.
+and post conditions in derived classes. A derived method may require
+no more, and promise no less, than its parent.
 
 Eiffel contracts are implemented in terms of assertions, similar to
 those found in the C family of languages. In practice Eiffel
 assertions are generally restricted to simple checks on field and
 parameter values.  Function calls are permitted though Meyer argues
-(p402) that such functions should be kept simple and "beyond
+\cite[p.\ 402]{oosc} that such functions should be kept simple and "beyond
 reproach".
 
 With Meyer's strongly object oriented approach, contracts are enforced
 when calling the public methods of an object. Calls internal to an
-object do not invoke the contracts or trigger invariant checks.
+object neither invoke the contracts nor trigger invariant checks.
 
 In line with Parnas' assertion that contracts should be readily
 available to the developer, Meyer provides a tool which generates a
@@ -76,17 +77,17 @@ post conditions are provided for class methods and the LSP is
 supported through the respective strengthening and weakening of those
 pre and post conditions.
 
-JML is written in terms of JML annotations embedded in the comments of
+JML is written in terms of annotations embedded in the comments of
 the Java program.  These comments are then processed by =jmlc= which
-generates a wrapper class to enforce the contract and delegate the
+generates a wrapper class to enforce the contract and delegates the
 implementation to the native java code.  The use of annotated comments
 simplifies the implementation of =jmlc=: it just has to pre-process the
 annotations and generate legal java which is then compiled as usual.
 Unfortunately it has the disadvantage that the usual productivity
 tools associated with a modern development environment: syntax
-highlighting, auto-completion etc are no longer available. 
+highlighting, auto-completion etc. are no longer available. 
 
-An unusual aspect of JML, in contrast to Eiffel, is its support for
+A distinctive aspect of JML, in contrast to Eiffel, is its support for
 model based specification. An abstract model of the system is
 constructed in the JML annotations and its representation checked
 against that of the underlying implementation. Data, albeit meta-data,
@@ -101,62 +102,91 @@ implementation.
 similarities and differences between Design by Contract and Larch's
 model based specifications.}
 
-# discussion of side effects in pre on #clojure: use of print
-# statements for debugging ...
+
+***************  :noexport:
+discussion of side effects in pre on #clojure: use of print
+statements for debugging ...
+*************** END
 
 
 
 
-* Contracts for higher order functions
+
+
+* Contracts in functional languages
 The simple parameter and return value checking that follows from
-Parnas' work has proved useful in the procedural world.  It's utility
+Parnas' work has proved useful in the procedural world.  Its utility
 is severely reduced in functional programming paradigms where
-functions are passed around as first class objects.  
+functions are passed around as first class objects.  It is no longer
+possible to simply examine the arguments to a function at call time to
+know if they satisfy the precondition.
 
 
 Although the absence of high order contracts has been picked up by the
 functional community, it is also of significance in the procedural and
-object oriented communities.  Even in C, function pointers can be passed so it
-could be advantageous to attache a contract to those functions.  In OO
-paradigms, patterns such as the Command Object \cite{GoF} allow a
-closure to be passed to a method for later processing; again a
-candidate for high order contract checking.
+object oriented communities.  Even in C, function pointers can be
+passed so it could be advantageous to attach a contract to those
+functions.  In object oriented paradigms, patterns such as the Command
+Object \cite{GoF} allow a closure to be passed to a method for later
+processing; again a candidate for high order contract checking.
 
 
-* Racket
-
-Previously known as PLT Scheme, Racket has taken on the idea of
-contracts. Contracts in Racket are separated from the function
+Racket, previously known as PLT Scheme, has taken on the idea of
+contracts. Contracts in Racket are separated from the function 
 definition in a module exports section \cite{racket}. This allows
 contracts to be enforced only at module boundaries.  Calls to a
 function within the module do not undergo contract checking.  This
-follows the premise of Eiffel (p 366).
+follows the premise of Eiffel \cite[p.\ 366]{oosc}.
 
 
-introduces the concept of =any= and =any/c=.  Can be used to state that any
-integer can be returned etc. 
+# introduces the concept of =any= and =any/c=.  Can be used to state
+# that any integer can be returned etc.
 
 
 From \cite{racket}: "Contracts are either simple predicates or function
 contracts.  Function contracts, in turn, consist of a pair of
-contracts [...] one for the domain of the function and one for the
+contracts [\ldots] one for the domain of the function and one for the
 range of the function."
 
 Findler and Felleisen introduce the idea that high order contracts
 cannot be enforced until some function consumes or produces only first
-order values.
+order values.  
 
-Contract definitions in terms of range and domain rather than predicates.
-
-Separation of contracts on structures from contracts on functions.
+Central to their implementation of contracts for high order functions
+is the meta function, =wrap= which wraps the underlying function
+implementation.  If the contract is a simple predicate, it is
+evaluated and the positive position blamed for any failure.  For
+non-flat i.e. function contracts, positive and negative blame
+positions are swapped and the wrap called recursively on that function
+contract.
 
 
 # High order contracts described in
 # file:./papers/contracts-as-projections.pdf
 
 
+Hinze et al.\ cite{citeulike:661450} extend the work of Findler and
+Felleisen, introducing a Domain Specific Language (DSL) to support the
+description and composition of contracts.  Again the focus of this work
+is on refining the blame assignment in the event of a contact failure.
+Whilst is helpful to know of the existence of a bug in your program,
+knowledge as to where in the program the bug exists is even more
+valuable.  Findler and Felleisen track at most two locations for blame
+assignment. When contracts are being applied to high order functions,
+this necessitates discarding dependent contract location data and
+replacing with the current contract's location data.  Hinze et al.\
+provide a pair of stacks of locations.  For a first order function
+this simplifies to the Findler and Felleisen model, but carries
+additional information for higher order functions.
 
-* Clojure
+
+\textit{TODO: Hinze uses manually assigned labels to locate the blame
+point in the code and leaves automatic source line identification for
+further study.  Using some of the ideas from
+=clojure-contrib/repl-utils= I may be able to provide that information
+automatically.}
+
+* A brief introduction to Clojure
 
 Clojure \cite{clojure} is a Lisp dialect running on the Java Virtual Machine (JVM).
 Primarily a functional language, Clojure uses Software Transactional
@@ -250,7 +280,9 @@ Will return:
 
 ** Anatomy of a clojure precondition
 
-#+begin_src clojure
+The usual way of introducing a function into a Clojure environment,
+=defn= is a macro which can accept pre and post conditions..
+#+begin_src clojure :exports none
  (macroexpand '(defn checked-java-sqrt 
     "Precondition checks prior to calling underlying function"
     [n]
@@ -279,10 +311,20 @@ descriptions.
 
 ** Mutable data
 
-Clojure provides support for mutable data through the use of
+Clojure provides support 
+
+
+
+for mutable data through the use of
 transactional reference =ref='s.  Modifications to the data must be
-wrapped in a transaction and may be protected by a validator
-function.
+wrapped in a transaction and may be protected by a validator function.
+This validator function provides another point at which system
+integrity may be verified.  When the validator is called the nature of
+the transaction is unknown so method pre and post conditions are
+inappropriate but this hood   does provide an ideal point for
+maintaining data invariants.
+
+
 
 
 \bibliographystyle{plain}
