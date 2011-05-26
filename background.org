@@ -11,7 +11,11 @@
     citecolor=black,%
     filecolor=black,%
     linkcolor=black,%
-    urlcolor=black}
+    urlcolor=black,
+    pdfauthor=Giles Chamberlin,
+    pdfsubject=Draft chapter for M.Sc. dissertation,
+    pdftitle=Design by contract in Clojure
+}
 
 
 
@@ -117,7 +121,7 @@ possible to simply examine the arguments to a function at call time to
 know if they satisfy the precondition.
 
 
-Although the absence of high order contracts has been picked up by the
+Although the absence of high order contracts has been noted by the
 functional community, it is also of significance in the procedural and
 object oriented communities.  Even in C, function pointers can be
 passed so it could be advantageous to attach a contract to those
@@ -161,7 +165,7 @@ contract.
 
 Hinze et al.\cite{citeulike:661450} extend the work of Findler and
 Felleisen, introducing a Domain Specific Language (DSL) to support the
-description and composition of contracts.  Again the focus of this work
+description and composition of contracts.  Again a focus of this work
 is on refining the blame assignment in the event of a contact failure.
 Whilst is helpful to know of the existence of a bug in your program,
 knowledge as to where in the program the bug exists is even more
@@ -326,7 +330,7 @@ possibilities, examination of typical libraries reveals little usage:
 
 A similar picture emerges for the use of validator functions, there
 are no calls to =set-validator!= in =clojure-contrib=.  Refs are in
-use though: the transactions functions used to alter them are called
+use though: the transaction functions used to alter them are called
 several times:
 
 | mutating function | frequency |
@@ -340,6 +344,6 @@ narrow.  There's now a list of many clojure libraries at
 clojure-libraries.appspot.com so taking a representative sample from
 there might be fairer.}
 
-
+\pagebreak
 \bibliographystyle{alpha}
 \bibliography{dbc}
