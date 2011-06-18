@@ -1,5 +1,5 @@
 (ns dbc.core
-  (:use clojure.test clojure.template))
+  (:use clojure.test clojure.template clojure.contrib.condition))
 
 
 ;; Commentary
@@ -66,8 +66,7 @@ respectively."
 
 ; TODO look at using clojure-contrib.condition/raise here
 (defn contract-error [position]
-  (print "Contract failed: " position)
-  (assert false))
+  (throw (Exception. (str "Contract failed: " position))))
 
 
 
@@ -114,9 +113,9 @@ respectively."
 (deftest contracts
   (testing "FO Contracts"
     (is (= 42 (wrap lenient 42 "pos" "neg")))
-    (is (thrown? java.lang.AssertionError (wrap strict 42 "pos" "neg")))
+    (is (thrown? java.lang.Exception (wrap strict 42 "pos" "neg")))
     (is (= 41 (wrap (partial > 42) 41 "pos" "neg")))
-    (is (thrown? java.lang.AssertionError
+    (is (thrown? java.lang.Exception
 		 (wrap (partial > 42) 43 "pos" "neg")))))
 
 
@@ -204,7 +203,7 @@ respectively."
 
 (deftest square-roots
   (is (< 0 (sqrt-1 4)))
-  (is (thrown? java.lang.AssertionError (sqrt-1 -2))))
+  (is (thrown? java.lang.Exception (sqrt-1 -2))))
 
 
 ;;; Looking now at the high order functions in F &F
@@ -239,6 +238,11 @@ respectively."
 (deftest ff-example
   (save (fn [_] 50))
   (is (= 50 (use 42)))
-  (is (thrown? java.lang.AssertionError (use -1)))
+  (is (thrown? java.lang.Exception (use -1)))
   (save (fn [_] -1))
-  (is (thrown? java.lang.AssertionError (use 42))))
+  (is (thrown? java.lang.Exception (use 42))))
+
+
+
+
+
