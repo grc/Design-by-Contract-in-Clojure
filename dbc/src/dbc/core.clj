@@ -1,5 +1,5 @@
 (ns dbc.core
-  (:use clojure.test))
+  (:use clojure.test clojure.template))
 
 
 ;; Commentary
@@ -66,8 +66,8 @@ respectively."
 
 ; TODO look at using clojure-contrib.condition/raise here
 (defn contract-error [position]
-  ;(print "Contract failed: " position)
-  (assert (and false position)))
+  (print "Contract failed: " position)
+  (assert false))
 
 
 
@@ -83,7 +83,6 @@ respectively."
     (ho-wrap contract value p n)))
 
 (defn fo-wrap  [contract value p n]
-  (print "\nfo-wrap: " contract " value: " value)
   (if (pred contract value)
       value
       (contract-error p)))
@@ -91,7 +90,6 @@ respectively."
 (defn ho-wrap [ct x p n]
   (let [d (dom ct)
 	r (rng ct)]
-    (print "\nho-wrap: " ct " value: " x)
     (fn [y] (wrap r
 		  (x (wrap d y n p))
 		  p
@@ -144,25 +142,103 @@ respectively."
 
 (deftest ho-contract
   (testing "Sanity check on a-ho-fn"
+
+
+
+
     (is (= 7 (a-ho-fn (plus1) 6)))))
 
 
 
+
+
+;;; I want this ..
+
+
+
+;; (defn wrap-args
+;;   "Return a vector of wrapped arguments.
+;; Odd arguments are the vale, even the contract to apply"
+;;   [ args p n]
+;;   (let [values (take-nth 2 args)
+;; 	contracts (take-nth 2 (drop 1 args))]
+   
+;;     ))
+
+;; (defmacro defcontract [name args body]
+;;     (let [values (take-nth 2 args)
+;; 	  contracts (take-nth 2 (drop 1 args))
+;; 	  wrapped (map wrap values contracts (repeat "p") (repeat "n"))]
+;;       `(defn ~name ~args
+;; 	 (let (vector (interleaved values wrapped))
+;; 	   ~body) )))
+
+;; (defcontract identity [v c]
+;;   v)
+
+;; ;;; to turn in to this ...
+;; (defn identity [v c]
+
+;;   (let [v (wrap c v "p" "n")]
+;;     v))
+(defn foo [v c]
+  (+ v c))
+
+
+(defn my-wrap [vs cs]
+  (map foo vs cs))
+
+
+(defmacro defcontract [args]
+  (let [values (vector (take-nth 2 args))
+	contracts (vector (take-nth 2 (drop 1 args)))]
+    (apply-template (quote values) '(+ x x) (quote contracts) )))
+
+
+
+
+
+;;; What do we want sqrt to expand to?
+(defn sqrt-1 [n]
+  (Math/sqrt   (wrap gt0 n "p" "n")))
+
+(deftest square-roots
+  (is (< 0 (sqrt-1 4)))
+  (is (thrown? java.lang.AssertionError (sqrt-1 -2))))
+
+
+;;; Looking now at the high order functions in F &F
 
 ;; Idea based on section 2.2 of F&F
 
 
 (def saved (ref (fn [_] 50)))
 
-
+;;; Contract I'm looking for states that the function takes and
+;;; returns gt0
 
 ;;; (bigger-than-0 -> bigger-than-0) -> any
-(defn save [f] (dosync (ref-set saved f) ))
+(defn save [f] (dosync (ref-set
+			saved
+			(wrap (make-contract gt0 gt0) f "p" "n")) ))
 
 
-(defn save-contract []
-  (make-contract (make-contract gt0 gt0) gt0))
 ;;; bigger-than-0 -> bigger-than-0
-(defn use [n] (saved n))
+;;; TODO We're not yet checkig return values
+(defn use [n] (saved (wrap gt0 n "p" "n")))
 
 
+(defn naked-use
+  "Enforces no contract of its own"
+  [n]
+  (saved n))
+
+(defn returns-lt0 [_]
+  -1)
+
+(deftest ff-example
+  (save (fn [_] 50))
+  (is (= 50 (use 42)))
+  (is (thrown? java.lang.AssertionError (use -1)))
+  (save (fn [_] -1))
+  (is (thrown? java.lang.AssertionError (use 42))))
