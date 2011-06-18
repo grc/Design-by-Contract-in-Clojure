@@ -1,0 +1,46 @@
+Each parameter is subjected to =wrap=.  Should it be a first order
+parameter then the assertion is triggered immediately.  If it's a high
+order function then another function is returned which wraps the
+original in a contract checker.
+
+
+
+We want to be able to replace every argument passed in to the function
+with equivalents checked for contractual correctness.  We then use
+these wrapped functions in place:
+
+For each argument (and return value) require a contract.  Shadow the
+argument names in a let binding so that we can use the arg names in
+the body.  Call =wrap= on the original arguments to obtain the
+validated ones.
+
+
+
+
+From irc
+
+ http://richhickey.github.com/clojure/clojure.template-api.html
+
+`(let ~(vector 'a 1) ~'a))
+
+#+begin_src clojure
+(defcontract sqrt [n '(> 0)])
+
+
+  (defn sqrt-contract [a]
+
+    
+    (let [a (wrap a a') b (wrap b b')]
+      (foo' a' b')))
+  
+#+end_src
+
+
+* lazy sequences?
+
+* global variables
+
+
+* Existinr work
+
+There's a contracts library at http://www.fogus.me/fun/trammel/docs.html
