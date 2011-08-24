@@ -1,21 +1,162 @@
-Each parameter is subjected to =wrap=.  Should it be a first order
-parameter then the assertion is triggered immediately.  If it's a high
-order function then another function is returned which wraps the
-original in a contract checker.
+#+TITLE:     Design by Contract in Clojure: implementation
+#+AUTHOR:    Giles Chamberlin
+#+OPTIONS:   H:2 num:t toc:nil \n:nil @:t ::t |:t ^:nil -:t f:t *:t <:t
+#+OPTIONS:   TeX:t LaTeX:t skip:nil d:nil todo:t pri:nil tags:not-in-toc
+#+LaTeX_CLASS_OPTIONS: [a4paper, 12pt] 
+#+LATEX_HEADER: \usepackage{parskip} \usepackage{times} \usepackage{listings} \usepackage{cite}
+#+LATEX_HEADER: \usepackage{hyperref} 
+
+\hypersetup{
+    colorlinks,%
+    citecolor=black,%
+    filecolor=black,%
+    linkcolor=black,%
+    urlcolor=black,
+    pdfauthor=Giles Chamberlin,
+    pdfsubject=Draft chapter for M.Sc. dissertation,
+    pdftitle=Design by contract in Clojure
+}
+
+
+* A Clojure implementation
+
+Our initial implementation is based on that described by Findelr and
+Fellisen: we create a function, =wrap= which is used to wrap each
+parameter in a function call.  Should the parameter be first-order,
+=warp= will trigger an immediate assertion check.  High order
+parameters, function which will be used later, are replaced a new
+function which wraps the original in a contract checker:
+
+#+srcname: preamble
+#+begin_src clojure :exports none
+(ns dbc.core
+  (:use clojure.test clojure.template clojure.contrib.condition))
+
+
+;; Commentary
+;; Contracts consist of two parts: pre and post
+;; conditions, stored in the contract map as dom and rnf respectively.
+;;
+;; All contracts pertain to the arguments to this function so if the
+;; argument is a high order function, then the contract states: "takes
+;; a function which returns positive numbers" or some such.
+
+;; So how do we describe that contract?
+
+;; "takes a positive number": (pos ?)
+;; "takes a function which returns a positive number": ?
+
+
+(defn make-contract [pre post]
+  "Returns a contract with dom and rng set to pre and post
+respectively."
+  {:dom pre :rng post})
+
+(defn dom [contract]
+  (:dom contract))
+
+(defn rng [contract]
+  (:rng contract))
+
+(defn flat? [x]
+  (not (map? x)))
+
+(defn lenient [_]
+  true)
+
+(defn strict [_]
+  false)
+
+(defn gt0 [x]
+  (and
+   (number? x)
+   (pos? x)))
+
+
+(deftest contract-construction
+  (testing "Flat predicate"
+    (is (flat? :foo))
+    (is (not (flat? (make-contract :foo :bar)))))
+  (testing "Contract construction"
+    (is (= 2 (count (make-contract :foo :bar))))
+    (is ((dom (make-contract lenient lenient)) 42))))
 
 
 
-We want to be able to replace every argument passed in to the function
-with equivalents checked for contractual correctness.  We then use
-these wrapped functions in place:
 
-For each argument (and return value) require a contract.  Shadow the
-argument names in a let binding so that we can use the arg names in
-the body.  Call =wrap= on the original arguments to obtain the
-validated ones.
+
+(defn pred [contract value]
+  "CONTRACT must be a function which accepts a single value to check."
+  (contract value))
 
 
 
+; TODO look at using clojure-contrib.condition/raise here
+(defn contract-error [position]
+  (throw (Exception. (str "Contract failed: " position))))
+
+
+#+end_src
+
+# Wrap code here.
+#+srcname: wrap
+#+begin_src clojure
+  ;;; Mutual recursion, as in ho-warp and wrap, probably ought to
+  ;;; use trampolining:
+  ;;; http://groups.google.com/group/clojure/msg/3addf875319c5c10
+  
+  (declare fo-wrap ho-wrap)
+  
+  (defn wrap [contract value p n]
+    (if (flat? contract)
+      (fo-wrap contract value p n)
+      (ho-wrap contract value p n)))
+  
+  (defn fo-wrap  [contract value p n]
+    (if (pred contract value)
+        value
+        (contract-error p)))
+  
+  (defn ho-wrap [ct x p n]
+    (let [d (dom ct)
+          r (rng ct)]
+      (fn [y] (wrap r
+                    (x (wrap d y n p))
+                    p
+                    n))))
+  
+  
+  
+  
+#+end_src
+
+A simple high order example of the use of =wrap= is based on
+F&F. Consider a function =save= which saves a function and =use= which
+later calls the saved function, activating its contract:
+
+
+
+
+
+
+
+
+
+
+** Code generation
+Although logically correct, manually wrapping each occurrence of a
+parameter in calls to =wrap= is tedious work, the sort of thing
+computers were intended to relieve us from.  Clojure, like other
+lisps, has a sophisticated macro system which can be used to
+automatically generate this code.  
+
+Designing the macro proceeds from both ends: what code do we want to
+generate and what code do we want to write to produce that result.  
+
+
+
+
+* Notes 
 
 From irc
 
@@ -36,11 +177,20 @@ From irc
 #+end_src
 
 
+Note that if parameter is never used the contract is never checked!
+
 * lazy sequences?
 
 * global variables
 
 
-* Existinr work
+* Existing work
 
 There's a contracts library at http://www.fogus.me/fun/trammel/docs.html
+
+
+#+srcname: full
+#+begin_src clojure :tangle literate :exports none :noweb yes
+<<preamble>>
+<<wrap>>
+#+end_src
