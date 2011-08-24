@@ -1,5 +1,6 @@
+
 (ns dbc.core
-  (:use clojure.test clojure.template clojure.contrib.condition))
+  (:use clojure.test clojure.template clojure.contrib.condition clojure.walk))
 
 
 ;; Commentary
@@ -14,10 +15,6 @@
 
 ;; "takes a positive number": (pos ?)
 ;; "takes a function which returns a positive number": ?
-
-(defn make-ho-contract [pre post]
-  "Return a contract for a high order function"
-  [pre post])
 
 
 (defn make-contract [pre post]
@@ -141,10 +138,6 @@ respectively."
 
 (deftest ho-contract
   (testing "Sanity check on a-ho-fn"
-
-
-
-
     (is (= 7 (a-ho-fn (plus1) 6)))))
 
 
@@ -224,7 +217,7 @@ respectively."
 
 ;;; bigger-than-0 -> bigger-than-0
 ;;; TODO We're not yet checkig return values
-(defn use [n] (saved (wrap gt0 n "p" "n")))
+(defn ff-use [n] (saved (wrap gt0 n "p" "n")))
 
 
 (defn naked-use
@@ -237,12 +230,86 @@ respectively."
 
 (deftest ff-example
   (save (fn [_] 50))
-  (is (= 50 (use 42)))
-  (is (thrown? java.lang.Exception (use -1)))
+  (is (= 50 (ff-use 42)))
+  (is (thrown? java.lang.Exception (ff-use -1)))
   (save (fn [_] -1))
-  (is (thrown? java.lang.Exception (use 42))))
+  (is (thrown? java.lang.Exception (ff-use 42))))
+
+
+(defn returns-gt0 [_]
+  1)
+
+(defn requires-ho-returning-gt0 [f]
+  ((wrap (make-contract lenient gt0) f "p" "n") 42))
+
+
+(deftest post-checks
+  (is (= 1 (requires-ho-returning-gt0 returns-gt0)))
+  (is (thrown? java.lang.Exception
+	       (requires-ho-returning-gt0 returns-lt0))))
+
+
+
+;;; So how to generate code that looks like
+;;; (defn sqrt-1 [n]
+;;;   (Math/sqrt   (wrap gt0 n "p" "n")))
+
+;;; I'd like to type:
+;;; (defcontract sqrt-c [ {n gt0} ]...)
+
+;; (defmacro defcontract [ n c body]
+;;   `(defn foo [~n]
+;;      ~(apply-template  '[~n]
+;; 		      '~body
+;; 		      '[(wrap ~c  ~n "p" "n")])))
+
+
+(defmacro defcontract [n c body]
+  (apply-template '[n] 'body '[c]))
+
+(defmacro expt [n c body]
+  `(defn bar [~n ~c]
+    ~(apply-template `[~n] '(+ a 5) `[(modify ~n)])))
+
+
+
+;; this one looks like its working: but fails with recursive calls to apply-template
+
+
+
+(defmacro defcontract [fn-name argv ctxv body]
+  (assert (vector? argv))
+  (assert (vector? ctxv))
+  (assert (list? body))
+  `(defn ~fn-name  ~argv ~(apply-template
+			  argv
+			  body
+			  (vec (map wrap-contract argv ctxv)))))
+;; need to transform ctxv in line above to `(wrap c n "p" "n")' in
+;; line above.
+
+
+;; so simplify to using clojure.core/replace
+
+;; (defmacro grccontract [fn-name a c body]
+;;   `(defn ~fn-name [~a]
+;;      ~(replace {a :a} body)))
+
+;From tufflax on #clojure: (clojure.walk/postwalk-replace {'n '(modify n)} '(+ (+ n 1) 5))
+
+(defmacro grccontract [fn-name a c body]
+  `(defn ~fn-name [~a]
+     ~(clojure.walk/postwalk-replace {a `(wrap ~c ~a "p" "n")} body)))
+
+
+
+;; we want to transform all the args to the output
+;;; of the following:
+;(vector (map wrap-contract argv ctxv))
 
 
 
 
 
+(defn wrap-contract [n c]
+  (list * c n))
