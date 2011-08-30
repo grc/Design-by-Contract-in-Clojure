@@ -303,9 +303,15 @@ respectively."
 
 
 
-;; we want to transform all the args to the output
-;;; of the following:
-;(vector (map wrap-contract argv ctxv))
+;; as and cd are vectors of args and contracts.  subst builds up a map
+;; of args against replacements for use by postwalk-replace.
+(defmacro grccontract2 [fn-name as cs body]
+  (assert (vector? as))
+  (assert (vector? cs))
+  (let [subst (zipmap as (map (fn [a c] `(wrap ~c ~a)) as cs)) ] 
+       `(defn ~fn-name ~as
+	  ~(clojure.walk/postwalk-replace subst body))))
+
 
 
 

@@ -58,8 +58,7 @@ respectively."
 (defn rng [contract]
   (:rng contract))
 
-(defn flat? [x]
-  (not (map? x)))
+(declare flat?)
 
 (defn lenient [_]
   true)
@@ -89,7 +88,7 @@ respectively."
   "CONTRACT must be a function which accepts a single value to check."
   (contract value))
 
-
+  (declare fo-wrap ho-wrap)
 
 ; TODO look at using clojure-contrib.condition/raise here
 (defn contract-error [position]
@@ -98,15 +97,15 @@ respectively."
 
 #+end_src
 
-# Wrap code here.
+\begin{figure}[h]
 #+srcname: wrap
 #+begin_src clojure
-  ;;; Mutual recursion, as in ho-warp and wrap, probably ought to
-  ;;; use trampolining:
-  ;;; http://groups.google.com/group/clojure/msg/3addf875319c5c10
-  
-  (declare fo-wrap ho-wrap)
-  
+    ;;; Mutual recursion, as in ho-warp and wrap, probably ought to
+    ;;; use trampolining:
+    ;;; http://groups.google.com/group/clojure/msg/3addf875319c5c10
+    
+
+    
   (defn wrap [contract value p n]
     (if (flat? contract)
       (fo-wrap contract value p n)
@@ -114,8 +113,8 @@ respectively."
   
   (defn fo-wrap  [contract value p n]
     (if (pred contract value)
-        value
-        (contract-error p)))
+      value
+      (contract-error p)))
   
   (defn ho-wrap [ct x p n]
     (let [d (dom ct)
@@ -125,11 +124,12 @@ respectively."
                     p
                     n))))
   
-  
-  
-  
+  (defn flat? [x]
+    (not (map? x)))
 #+end_src
-
+\label{wrap}
+\caption{Clojure implementation of \texttt{wrap}}
+\end{figure}
 A simple high order example of the use of =wrap= is based on
 F&F. Consider a function =save= which saves a function and =use= which
 later calls the saved function, activating its contract:
@@ -150,9 +150,69 @@ computers were intended to relieve us from.  Clojure, like other
 lisps, has a sophisticated macro system which can be used to
 automatically generate this code.  
 
-Designing the macro proceeds from both ends: what code do we want to
-generate and what code do we want to write to produce that result.  
+\begin{figure}[h]
+\label{defcontract1}
+#+srcname: defcontract1
+#+begin_src clojure
+(defmacro defcontract-1 [fn-name as cs body]
+  (assert (vector? as))
+  (assert (vector? cs))
+  (let [subst (zipmap as (map (fn [a c] `(wrap ~c ~a)) as cs)) ] 
+       `(defn ~fn-name ~as
+	  ~(clojure.walk/postwalk-replace subst body))))
+#+end_src
+\caption{Initial contract definition}
+\end{figure}
 
+Examining what's happening in Figure \ref{defcontract1}: the =let=
+line creates a map of substitutions for every function argument (the
+vector =as=), calling =wrap= with the corresponding member of the
+contract array =cs=. The macro then emits the function definition,
+rendering the back-quoted form verbatim and substituting \tilde
+prefixed expressions by their evaluated result.  The function
+=postwalk-replace= will replace each member of =as= with the
+corresponding wrapped call in =subst=.
+
+The overall result of this macro is to create a function definition
+with every use of an argument wrapped in a call to the =wrap= function
+of Figure \ref{wrap}. 
+
+** Separation of concerns
+The macro defined in Figure \ref{defcontract1} successfully automates
+the process of wrapping function parameters in contract checking
+code. Unfortunately the resulting code is monolithic; conflating
+function implementation and contract.  When used for functions like
+the =sqrt= example this is not too disastrous: the contract is a
+result of the underlying mathematics of the implementation.  But if we
+need similar contracts for other functions reuse will be limited.  In
+some cases contracts will be used to impose business rules on a
+function, rather than implementation artefacts.  In that case we may
+want to reuse the function implementation with a different contract in
+an alternative environment.
+
+Ideally a contracts should be just an aspect of the function, along
+with its implementation.  Aspect Oriented Programming has been used
+\cite{aopdbc} to implement Design by Contract in AspectJ.  We're
+seeking to develop a similar approach where the contract and
+underlying function implementation can be specified separately and
+combined at will.
+
+Following the method used for first order contracts in \cite{joy} we
+restate the problem to provide a contract observing function which
+calls an implementation function.  
+
+\begin{figure}[h]
+#+begin_src clojure
+;; TODO provide an example of the above
+#+end_src
+\end{figure}
+
+The boiler plate code for this recurring pattern can be abstracted in
+to another macro:
+
+#+begin_src clojure
+;; macro to generate the above
+#+end_src
 
 
 
@@ -193,4 +253,5 @@ There's a contracts library at http://www.fogus.me/fun/trammel/docs.html
 #+begin_src clojure :tangle literate :exports none :noweb yes
 <<preamble>>
 <<wrap>>
+<<defcontract1>>
 #+end_src

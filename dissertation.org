@@ -1,0 +1,9 @@
+#+INCLUDE: "background.org"
+#+INCLUDE: "impl.org"
+foo
+
+* A brief introduction to Clojure
+* Anatomy of a clojure precondition
+* A Clojure implementation
+* Notes
+* Existing work
