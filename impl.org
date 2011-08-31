@@ -3,8 +3,11 @@
 #+OPTIONS:   H:2 num:t toc:nil \n:nil @:t ::t |:t ^:nil -:t f:t *:t <:t
 #+OPTIONS:   TeX:t LaTeX:t skip:nil d:nil todo:t pri:nil tags:not-in-toc
 #+LaTeX_CLASS_OPTIONS: [a4paper, 12pt] 
-#+LATEX_HEADER: \usepackage{parskip} \usepackage{times} \usepackage{listings} \usepackage{cite}
+#+LATEX_HEADER: \usepackage{parskip} \usepackage{times} \usepackage{minted} \usepackage{cite}
 #+LATEX_HEADER: \usepackage{hyperref} 
+
+#+LaTeX_HEADER: \usemintedstyle{bw}
+#+LaTeX_HEADER: \newminted{common-lisp}{fontsize=\footnotesize}
 
 \hypersetup{
     colorlinks,%
@@ -23,7 +26,7 @@
 Our initial implementation is based on that described by Findelr and
 Fellisen: we create a function, =wrap= which is used to wrap each
 parameter in a function call.  Should the parameter be first-order,
-=warp= will trigger an immediate assertion check.  High order
+=wrap= will trigger an immediate assertion check.  High order
 parameters, function which will be used later, are replaced a new
 function which wraps the original in a contract checker:
 
@@ -190,7 +193,7 @@ function, rather than implementation artefacts.  In that case we may
 want to reuse the function implementation with a different contract in
 an alternative environment.
 
-Ideally a contracts should be just an aspect of the function, along
+Ideally a contract should just be an aspect of the function, along
 with its implementation.  Aspect Oriented Programming has been used
 \cite{aopdbc} to implement Design by Contract in AspectJ.  We're
 seeking to develop a similar approach where the contract and
@@ -201,11 +204,13 @@ Following the method used for first order contracts in \cite{joy} we
 restate the problem to provide a contract observing function which
 calls an implementation function.  
 
-\begin{figure}[h]
+#+BEGIN_listing
+#+LATEX: \caption{The caption.}\label{fig:src_blk}
 #+begin_src clojure
 ;; TODO provide an example of the above
 #+end_src
-\end{figure}
+#+END_listing
+
 
 The boiler plate code for this recurring pattern can be abstracted in
 to another macro:
