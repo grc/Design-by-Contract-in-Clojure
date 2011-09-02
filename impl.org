@@ -150,6 +150,10 @@ later calls the saved function, activating its contract:
 
 
 
+
+
+
+
 ** Code generation
 Although logically correct, manually wrapping each occurrence of a
 parameter in calls to =wrap= is tedious work, the sort of thing
@@ -160,7 +164,7 @@ automatically generate this code.
 #+begin_listing
 #+LATEX: \caption{Initial contract macro}\label{defcontract1}
 #+srcname: defcontract1
-#+begin_src clojure
+#+begin_src clojure :tangle yes :exports code
 (defmacro defcontract-1 [fn-name as cs body]
   (assert (vector? as))
   (assert (vector? cs))
