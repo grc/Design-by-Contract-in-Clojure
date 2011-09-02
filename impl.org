@@ -7,7 +7,7 @@
 #+LATEX_HEADER: \usepackage{hyperref} 
 
 #+LaTeX_HEADER: \usemintedstyle{bw}
-#+LaTeX_HEADER: \newminted{common-lisp}{fontsize=\footnotesize}
+#+LaTeX_HEADER: \newminted{common-lisp}{fontsize=\footnotesize,linenos}
 
 \hypersetup{
     colorlinks,%
@@ -20,6 +20,7 @@
     pdftitle=Design by contract in Clojure
 }
 
+\listoflistings
 
 * A Clojure implementation
 
@@ -100,15 +101,19 @@ respectively."
 
 #+end_src
 
-\begin{figure}[h]
-#+srcname: wrap
-#+begin_src clojure
-    ;;; Mutual recursion, as in ho-warp and wrap, probably ought to
-    ;;; use trampolining:
-    ;;; http://groups.google.com/group/clojure/msg/3addf875319c5c10
+
+
+#     Mutual recursion, as in ho-warp and wrap, probably ought to
+#     use trampolining:
+#     http://groups.google.com/group/clojure/msg/3addf875319c5c10
     
 
     
+
+#+latex: \begin{listing}[H]
+#+LATEX: \caption{Clojure implementation of \texttt{wrap}}\label{wrap}
+#+srcname: wrap
+#+begin_src clojure
   (defn wrap [contract value p n]
     (if (flat? contract)
       (fo-wrap contract value p n)
@@ -130,9 +135,8 @@ respectively."
   (defn flat? [x]
     (not (map? x)))
 #+end_src
-\label{wrap}
-\caption{Clojure implementation of \texttt{wrap}}
-\end{figure}
+#+latex: \end{listing}
+
 A simple high order example of the use of =wrap= is based on
 F&F. Consider a function =save= which saves a function and =use= which
 later calls the saved function, activating its contract:
@@ -153,8 +157,8 @@ computers were intended to relieve us from.  Clojure, like other
 lisps, has a sophisticated macro system which can be used to
 automatically generate this code.  
 
-\begin{figure}[h]
-\label{defcontract1}
+#+begin_listing
+#+LATEX: \caption{Initial contract macro}\label{defcontract1}
 #+srcname: defcontract1
 #+begin_src clojure
 (defmacro defcontract-1 [fn-name as cs body]
@@ -164,8 +168,8 @@ automatically generate this code.
        `(defn ~fn-name ~as
 	  ~(clojure.walk/postwalk-replace subst body))))
 #+end_src
-\caption{Initial contract definition}
-\end{figure}
+#+end_listing
+
 
 Examining what's happening in Figure \ref{defcontract1}: the =let=
 line creates a map of substitutions for every function argument (the
@@ -221,7 +225,7 @@ to another macro:
 
 
 
-* Notes 
+* Notes :noexport:
 
 From irc
 
@@ -244,12 +248,12 @@ From irc
 
 Note that if parameter is never used the contract is never checked!
 
-* lazy sequences?
+** lazy sequences?
 
-* global variables
+** global variables
 
 
-* Existing work
+** Existing work
 
 There's a contracts library at http://www.fogus.me/fun/trammel/docs.html
 
@@ -260,3 +264,5 @@ There's a contracts library at http://www.fogus.me/fun/trammel/docs.html
 <<wrap>>
 <<defcontract1>>
 #+end_src
+
+
