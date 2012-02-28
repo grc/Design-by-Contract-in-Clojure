@@ -51,9 +51,9 @@ contract violation blame is then assigned depending upon which
 condition was violated.
 
 Inheritance and the Liskov Substitution Principle (LSP) \cite{lsp} are
-supported through the respective strengthening and weakening of pre
+supported through the respective weakening and strengthening of pre
 and post conditions in derived classes. A derived method may require
-no more, and promise no less, than its parent.
+no more, and promise no less, than its parent. 
 
 Eiffel contracts are implemented in terms of assertions, similar to
 those found in the C family of languages. In practice Eiffel
@@ -80,9 +80,11 @@ specification.  This short form includes the pre and post conditions.
 
 JML \cite{jml} provides a Design by Contract framework for Java.  Much
 of the functionality is similar to that introduced in Eiffel: pre and
-post conditions are provided for class methods and the LSP is
-supported through the respective strengthening and weakening of those
-pre and post conditions.
+post conditions are provided for class methods and inheritance is
+supported through the respective  weakening and strengthening of those
+pre and post conditions. The exact nature of the refinement of pre-
+and post conditions differs from that in Eiffel \cite{Toth2010}.  We
+discuss this in section  \ref{foo}.
 
 JML is written in terms of annotations embedded in the comments of
 the Java program.  These comments are then processed by =jmlc= which
@@ -184,16 +186,34 @@ further study.  Using some of the ideas from
 clojure-contrib/repl-utils I may be able to provide that information
 automatically.}
 
-* A brief introduction to Clojure
+* A brief introduction to Lisps and Clojure
 
-Clojure \cite{clojure} is a Lisp dialect running on the Java Virtual Machine (JVM).
-Primarily a functional language, Clojure uses Software Transactional
-Memory (STM) to provide thread safe state changes. As with
-other Lisps, a powerful macro system is present.  This allows Clojure
-code to be treated as data.  Whilst the deep internals of Clojure are
-written in Java, the majority of the language is written in terms of
-itself.  For example =defn=, the symbol usually used to introduce a
-function definition, is written in terms of =fn=.
+Invented by John McCarthy in the late 1950's \cite{}, various flavours
+of the Lisp family of languages have hovered around, but never quite
+broken into, the mainstream software development world. Lisps have played
+a significant role in research into areas such as  artificial
+intelligence \cite{} and object oriented programming \cite{} where the
+simplicity of the core language \cite{Paul Graham} combined with its
+colonising approach to new paradigms makes it a powerful vehicle for
+experimentation. 
+
+
+
+We have chosen to use Clojure as the basis for our experiments in
+Design by Contract.  Clojure is attracting a resurgence of interest in
+Lisp as it provides a reasonably pure functional programming language,
+a well defined threading model and, probably most importantly, easy
+access to a large number of libraries through its use of the Java
+Virtual Machine. 
+
+
+Primarily a functional language, Clojure uses Software
+Transactional Memory (STM) to provide thread safe state changes. As
+with other Lisps, a powerful macro system is present.  This allows
+Clojure code to be treated as data.  Whilst the deep internals of
+Clojure are written in Java, the majority of the language is written
+in terms of itself.  For example =defn=, the symbol usually used to
+introduce a function definition, is written in terms of =fn=.
 
 A typical use of =defn= would be:
 
