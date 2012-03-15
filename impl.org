@@ -335,20 +335,6 @@ Using this macro we can simplify the definitions of =ff-use= and
 
 
 
-#+latex: \begin{listing}[H]
-#+latex: \caption{caption} \label{label}
-#+srcname: label
-#+begin_src clojure :tangle yes :exports code
-    (defmacro defcontract-2 [fn-name as cs body post]
-      (assert (vector? as))
-      (assert (vector? cs))
-      (let [subst (zipmap as (map (fn [a c] `(wrap ~c ~a "p" "n")) as cs)) ] 
-        `(defn ~fn-name ~as
-           (wrap post ~(clojure.walk/postwalk-replace subst body) "p" "n"))))
-  
-#+end_src
-#+latex: \end{listing}
-
 
 #+begin_src clojure :tangle yes :exports none
 
@@ -521,29 +507,34 @@ a symbol whose value will refer to a Var object.
                            (:file (meta (var name)))
                            (:line (meta (var name)))))
   
-  (defmacro defcontract-2 [fn-name as cs body]
-    (assert (vector? as))
-    (assert (vector? cs))
-    (let [subst (zipmap as (map (fn [a c] `(wrap ~c ~a (loc ~c) (loc ~c))) as cs)) ] 
-      `(defn ~fn-name ~as
-         ~(clojure.walk/postwalk-replace subst body))))
-  
-  
-  
-  (defcontract-2 ff-save-3 [f] 
-    [(make-contract gt0? gt0?)]
-    (dosync (ref-set ff-saved f)))
-  
-  (defcontract-2 ff-save-3 [f] 
-      [(make-contract gt0? gt0?)]
-      (dosync (ref-set ff-saved f)))
-  
-  (defcontract-2 ff-use-3 [n]
-    [gt0?]
-    (ff-saved n))
-  
-  
-  
+
+(defmacro defcontract-x [fn-name as cs post body]
+  (assert (vector? as))
+  (assert (vector? cs))
+  (let [subst (zipmap as (map (fn [a c] `(wrap ~c ~a "p" "n")) as cs))
+	new-body (clojure.walk/postwalk-replace subst body)] 
+    `(defn ~fn-name ~as
+       (wrap ~post ~new-body "foo" "bar"))))
+
+(defcontract-x ff-save-x [f] 
+  [(make-contract gt0? gt0?)]
+  lenient
+  (dosync (ref-set ff-saved f)))
+
+(defcontract-x ff-use-x [n]
+  [gt0?]
+  lenient
+  (ff-saved n))
+
+
+
+(deftest ff-example-x ;\ref{line:test}
+   (ff-save-x (fn [_] 50))
+   (is (= 50 (ff-use-2 42)))
+   (is (thrown? java.lang.Exception (ff-use-x -1)))
+   (ff-save-x (fn [_] -1))
+   (is (thrown? java.lang.Exception (ff-use-x 42))))
+
 #+end_src
 #+latex: \end{listing}
 
@@ -563,6 +554,17 @@ stack traces:
 
 * Notes :noexport:
 
+
+make-contract is actually making a HIGH ORDER contract.  First order
+contracts are flat assertions.
+
+what do we do about functions that take more than one parameter?
+Need to work out some use of =partial= to give us what we need.
+Current post condition check is an ugly special case.
+
+Same problem applies to function args that are fns of more than one
+arg.  This must be symmetric surely.
+
 ** lazy sequences?
 
 
@@ -575,6 +577,7 @@ There's a contracts library at http://www.fogus.me/fun/trammel/docs.html
 
 
 Is there any benefit in using hooks to give the ability to set contracts at run time?
+
 
 
 
