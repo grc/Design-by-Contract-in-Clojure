@@ -266,19 +266,31 @@ thing computers were intended to relieve us from.  Clojure, like other
 lisps, has a sophisticated macro system which can be used to
 automatically generate this code.
 
+
+** TODO rework text for single argument functions only
+
+
+  # (defmacro defcontract-1 [fn-name as cs body]
+  #   (assert (vector? as))
+  #   (assert (vector? cs))
+  #   (let [subst (zipmap as (map (fn [a c] `(wrap ~c ~a "p" "n")) as cs)) ] 
+  #     `(defn ~fn-name ~as
+  #        ~(clojure.walk/postwalk-replace subst body))))
+  
+  # (defcontract-1 ff-save-2 [f] 
+  #   [(make-contract gt0? gt0?)]
+  #   (dosync (ref-set ff-saved f)))
+
 #+begin_listing
 #+LATEX: \caption{Initial contract macro}\label{defcontract1}
 #+srcname: defcontract1
 #+begin_src clojure :tangle yes :exports code
-  (defmacro defcontract-1 [fn-name as cs body]
-    (assert (vector? as))
-    (assert (vector? cs))
-    (let [subst (zipmap as (map (fn [a c] `(wrap ~c ~a "p" "n")) as cs)) ] 
-      `(defn ~fn-name ~as
-         ~(clojure.walk/postwalk-replace subst body))))
+  (defmacro defcontract-1 [fn-name a c body]
+    (let [wrapped-arg {a `(wrap ~c ~a "p" "n")} ] 
+      `(defn ~fn-name [~a]
+         ~(clojure.walk/postwalk-replace wrapped-arg body))))
   
-  (defcontract-1 ff-save-2 [f] 
-    [(make-contract gt0? gt0?)]
+  (defcontract-1 ff-save-2 f (make-contract gt0? gt0?)
     (dosync (ref-set ff-saved f)))
   
 #+end_src
@@ -322,12 +334,11 @@ Using this macro we can simplify the definitions of =ff-use= and
 #+latex: \label{lst:ff-use2}
 #+srcname: label
 #+begin_src clojure :tangle yes :exports code
-  (defcontract-1 ff-save-2 [f] 
-      [(make-contract gt0? gt0?)]
-      (dosync (ref-set ff-saved f)))
+ ; (defcontract-1 ff-save-2 f 
+ ;   (make-contract gt0? gt0?)
+ ;     (dosync (ref-set ff-saved f)))
   
-  (defcontract-1 ff-use-2 [n]
-    [gt0?]
+  (defcontract-1 ff-use-2 n gt0?
     (ff-saved n))
 #+end_src
 #+latex: \end{listing}
