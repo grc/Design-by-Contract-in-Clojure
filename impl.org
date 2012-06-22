@@ -1,13 +1,15 @@
- #+TITLE:     Design by Contract in Clojure: implementation
+#+TITLE:     Design by Contract in Clojure: implementation
 #+AUTHOR:    Giles Chamberlin
 #+OPTIONS:   H:2 num:t toc:nil \n:nil @:t ::t |:t ^:nil -:t f:t *:t <:t
 #+OPTIONS:   TeX:t LaTeX:t skip:nil d:nil todo:t pri:nil tags:not-in-toc
 #+LaTeX_CLASS_OPTIONS: [a4paper, 12pt] 
-#+LATEX_HEADER: \usepackage{parskip} \usepackage{times} \usepackage{minted} \usepackage{cite}
-#+LATEX_HEADER: \usepackage{hyperref} 
+#+LATEX_HEADER: \usepackage{parskip} \usepackage{fourier} \usepackage{minted} \usepackage{cite}
+#+LATEX_HEADER: \usepackage{hyperref} \usepackage{inconsolata}
 
-#+LaTeX_HEADER: \usemintedstyle{bw}
-#+LaTeX_HEADER: \newminted{common-lisp}{fontsize=\footnotesize,linenos}
+
+
+# NOT IN USE LaTeX_HEADER: \usemintedstyle{bw}
+#+LaTeX_HEADER: \newminted{clojure}{fontsize=\huge,linenos}
 
 \hypersetup{
     colorlinks,%
@@ -38,9 +40,9 @@ entirety of this evolving family of definitions are made as
 
 Our initial implementation is based on that described by Findler and
 Fellisen. In Listing \ref{lst:wrap} we define a function, =wrap= which
-is used to wrap the parameter in a function call.  Should the
+is used to provide validation of a function parameter.  Should the
 parameter be first-order, =wrap= will trigger an immediate assertion
-check.  High order parameters, i.e. a function which will be used
+check.  High order parameters, i.e.\ a function which will be used
 later, are replaced by a new function which wraps the original in a
 contract checker.
 
@@ -56,7 +58,7 @@ emitted with the culprit identified appropriately.
   (:use clojure.test clojure.walk clojure.contrib.condition))
 ;; Commentary
 ;; This file is generated from the literate programming sources in
-;;  impl.org, use taht as the master.
+;;  impl.org, use that as the master.
 
 ;;
 ;; All contracts pertain to the arguments to this function so if the
@@ -111,7 +113,8 @@ emitted with the culprit identified appropriately.
 
 #+latex: \begin{listing}[H]
 #+LATEX: \caption{Clojure implementation of \texttt{wrap}}\label{lst:wrap}
-#+srcname: wrap
+#+srcname: wrap1
+
 #+begin_src clojure :tangle yes :exports code
   (defn wrap [contract value p n]
     (if (flat? contract)
@@ -270,6 +273,14 @@ parameter in calls to =wrap= is tedious and error prone; the sort of
 thing computers were intended to relieve us from.  Clojure, like other
 lisps, has a sophisticated macro system which can be used to
 automatically generate this code.
+
+Lisp's macros should not be considered in the same vein as the C
+family =#define=.  Whilst C's macros use a simple pre-processor to
+perform textual substitution, Lisp macros have access to the entire
+Lisp language to perform manipulations.  Macro are run and generate
+code at macro expansion time.  That code and any other regular code is
+then executed at run time.  A full explanation of macros is beyond the
+scope of this dissertation, \cite{Seibel} is recommended as a starting point.
 
 We will initially consider functions taking a single argument.
 Extension to multiple argument functions will be achieved through use
@@ -469,12 +480,24 @@ code involved in contract failures.  Our intent is to provide that
 information in the same format as produced by tools such as gcc so
 that other development tools can easily utilise the data, perhaps
 taking the user to the corresponding file. File and line information
-is available in clojure, but accessing it will take a short tour of
+is available in clojure, but accessing it will require a short tour of
 some of Clojure's internals.
 
-A basic building block of Clojure is the =var=.  They are created
-using the =def= special form: =(def name value)= which also creates
-a metadata map including entries for =:file= and =:line=.  This is the
+A basic building block of Clojure is the =var=.  From
+clojure.org/vars: "Vars provide a mechanism to refer to a mutable
+storage location that can be dynamically rebound (to a new storage
+location) on a per-thread basis. Every Var can (but needn't) have a
+root binding, which is a binding that is shared by all threads that do
+not have a per-thread binding. Thus, the value of a Var is the value
+of its per-thread binding, or, if it is not bound in the thread
+requesting the value, the value of the root binding, if any."
+
+Vars are created using the =def= special form: =(def name value)=
+which also creates a metadata map including entries for =:file= and
+=:line=.  Of interest to us is the fact that a function definition
+=(defn name [params*] exprs*)= is equivalent to defining a var =name=
+as =(def name (fn [params* ] exprs*))=.  We therefore have access to
+the file and line in which a function is defined. This is the
 information we wish to present to our users.  To provide an accessor
 to this information we use the following macro:
 
@@ -500,7 +523,7 @@ a symbol whose value will refer to a Var object.
 
 
 
-
+TODO - in this chunk we have yet to check return values
 
 #+latex: \begin{listing}[H]
 #+latex: \caption{caption} \label{label}
