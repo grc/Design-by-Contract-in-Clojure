@@ -183,7 +183,7 @@ and guarantees its return value is also positive.
   
   (def faulty-sqrt
      (wrap (make-contract gt0? gt0?)
-           (fn [_] -1)
+           (fn [not-used] -1)
            "Post condition violated" "Precondition violated"))
 #+end_src
 #+latex: \end{listing}
@@ -225,7 +225,7 @@ only accept functions which take and return  numbers greater than 0.
 #+latex: \caption{Application of \texttt{wrap}} \label{lst:ff-use}
 #+srcname: ff-use
 #+begin_src clojure :tangle yes :exports code
-  (def ff-saved (ref (fn [_] 50)))
+  (def ff-saved (ref (fn [not-used] 50)))
   
  
   
@@ -240,10 +240,10 @@ only accept functions which take and return  numbers greater than 0.
   
   
   (deftest ff-example ;\ref{line:test}
-    (ff-save (fn [_] 50))
+    (ff-save (fn [not-used] 50))
     (is (= 50 (ff-use 42)))
     (is (thrown? java.lang.Exception (ff-use -1)))
-    (ff-save (fn [_] -1))
+    (ff-save (fn [not-used] -1))
     (is (thrown? java.lang.Exception (ff-use 42))))
 #+end_src
 #+latex: \end{listing}
@@ -354,10 +354,10 @@ Using this macro we can simplify the definitions of =ff-use= and
 #+begin_src clojure :tangle yes :exports none
  
  (deftest ff-example-2 ;\ref{line:test}
-    (ff-save-2 (fn [_] 50))
+    (ff-save-2 (fn [not-used] 50))
     (is (= 50 (ff-use-2 42)))
     (is (thrown? java.lang.Exception (ff-use-2 -1)))
-    (ff-save-2 (fn [_] -1))
+    (ff-save-2 (fn [not-used] -1))
     (is (thrown? java.lang.Exception (ff-use-2 42))))
 #+end_src
 
@@ -391,7 +391,7 @@ calls an implementation function.
 #+latex: \caption{Separating contract from implementation} \label{aop}
 #+srcname: aop
 #+begin_src clojure :tangle yes :exports code
-;fi
+; Code for separting contract from impl
 #+end_src
 #+latex: \end{listing}
 
@@ -406,8 +406,7 @@ to another macro:
 
 
 
-\bibliographystyle{alpha}
-\bibliography{dbc}
+
 
 
 
@@ -451,6 +450,7 @@ This is distinct from simply shadowing the original.
 TODO Example
 
 
+#+latex: \begin{listing}
 #+begin_src clojure :tangle yes :exports code
   (defn simple-contract-error [position]
     (throw (Exception. (str "Contract failed: " position))))
@@ -463,7 +463,7 @@ TODO Example
   
   
 #+end_src
-
+#+latex: \end{listing}
 TODO work a citation to Toth in here. More subtly, there is a body of
 work on the way that
 
@@ -523,61 +523,80 @@ a symbol whose value will refer to a Var object.
 
 
 
-TODO - in this chunk we have yet to check return values
+TODO - This is in the wrong palce!
 
 #+latex: \begin{listing}[H]
 #+latex: \caption{caption} \label{label}
 #+srcname: label
 #+begin_src clojure :tangle yes :exports code
-  (defmacro m [f] `(:file (meta (var ~f))))
-  (defn loc [name] (format "%s:%s"
-                           (:file (meta (var name)))
-                           (:line (meta (var name)))))
+    (defmacro m [f] `(:file (meta (var ~f))))
+    (defn loc [name] (format "%s:%s"
+                             (:file (meta (var name)))
+                             (:line (meta (var name)))))
+    
   
-
-(defmacro defcontract-x [fn-name a c post body]
-  (let [wrapped-arg {a `(wrap ~c ~a "p" "n")} ] 
-    `(defn ~fn-name [~a]
-       ~(clojure.walk/postwalk-replace wrapped-arg body))))
-
-
-
-
-(defcontract-x ff-save-x f 
-  (make-contract gt0? gt0?)
-  lenient
-  (dosync (ref-set ff-saved f)))
-
-(defcontract-x ff-use-x n
-  gt0?
-  lenient
-  (ff-saved n))
-
-
-
-(deftest ff-example-x ;\ref{line:test}
-   (ff-save-x (fn [_] 50))
-   (is (= 50 (ff-use-2 42)))
-   (is (thrown? java.lang.Exception (ff-use-x -1)))
-   (ff-save-x (fn [_] -1))
-   (is (thrown? java.lang.Exception (ff-use-x 42))))
-
+  (defmacro defcontract-x [fn-name a c post body]
+    (let [wrapped-arg {a `(wrap ~c ~a "p" "n")} ] 
+      `(defn ~fn-name [~a]
+         (wrap ~post 
+               ~(clojure.walk/postwalk-replace wrapped-arg body)
+               "Post condition p" "Post Condition n"))))
+  
+  
+  
+  
+  (defcontract-x ff-save-x f 
+    (make-contract gt0? gt0?)
+    lenient
+    (dosync (ref-set ff-saved f)))
+  
+  (defcontract-x ff-use-x n
+    gt0?
+    lenient
+    (ff-saved n))
+  
+  
+  
+  (deftest ff-example-x ;\ref{line:test}
+     (ff-save-x (fn [not-used] 50))
+     (is (= 50 (ff-use-2 42)))
+     (is (thrown? java.lang.Exception (ff-use-x -1)))
+     (ff-save-x (fn [not-used] -1))
+     (is (thrown? java.lang.Exception (ff-use-x 42))))
+  
 #+end_src
 #+latex: \end{listing}
 
 
-stack traces:
+In the event of a failed contract, we wish to be able to report the
+sequence of events which lead up to the failure.  This is typically
+achieved through a stack trace: a description of the function call
+stack. The JVM used by Clojure allows us to access the function call
+stack as shown in Listing \ref{stacktrace}
+
+
+#+latex: \begin{listing}[H]
+#+latex: \caption{Stack trace} \label{stacktrace}
+#+srcname: label
+
 
 (defn ignored? [classname]
   (let [ignored #{"callers" "dbg" "clojure.lang" "swank" "eval"}]
     (some #(s/substring? % classname) ignored)))
 
-
-
 (defn callers []
   (let [fns (map #(str (.getClassName %))
 		 (-> (Throwable.) .fillInStackTrace .getStackTrace))]
     (vec (doall fns))))
+
+
+#+latex: \end{listing}
+
+Unfortunately here we face a potential performance impact.  The stack
+trace can only be generated at run time
+
+\bibliographystyle{alpha}
+\bibliography{dbc}
 
 * Notes :noexport:
 
