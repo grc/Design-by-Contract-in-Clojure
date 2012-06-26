@@ -4,12 +4,14 @@
 #+OPTIONS:   TeX:t LaTeX:t skip:nil d:nil todo:t pri:nil tags:not-in-toc
 #+LaTeX_CLASS_OPTIONS: [a4paper, 12pt] 
 #+LATEX_HEADER: \usepackage{parskip} \usepackage{fourier} \usepackage{minted} \usepackage{cite}
-#+LATEX_HEADER: \usepackage{hyperref} \usepackage{inconsolata}
+#+LATEX_HEADER: \usepackage{hyperref} 
 
 
+# upquote package is used to get proper back quote behaviour in code
+# listings.  Means we can't change from Computer Modern for our tt font
 
-# NOT IN USE LaTeX_HEADER: \usemintedstyle{bw}
-#+LaTeX_HEADER: \newminted{clojure}{fontsize=\huge,linenos}
+#+LaTeX_HEADER: \usepackage{upquote} \usemintedstyle{bw} 
+
 
 \hypersetup{
     colorlinks,%
@@ -167,9 +169,10 @@ structure of choice is =map=.  Here we define two keys, =:dom= and
     (not (map? x)))
 #+end_src
 
-Looking first at an Eiffel style first order contract we define a faulty
-single parameter function which requires its argument to be positive
-and guarantees its return value is also positive.  
+To examine how this works we look first at an Eiffel style first order
+contract. We define a faulty single parameter function which requires
+its argument to be positive and guarantees its return value is also
+positive.
 
 
 #+latex: \begin{listing}[H]
@@ -189,15 +192,14 @@ and guarantees its return value is also positive.
 #+latex: \end{listing}
 
 
-TODO this predicate is used in faulty-sqrt, earlier.
 
-In Listing \ref{lst:fo} we introduce the predicate =gt0?= to
+
+In Listing \ref{lst:fo} we introduced the predicate =gt0?= to
 verify that the argument is both numeric and greater than zero. A
 naive use of the predicate =pos?= will cause a
 =java.lang.ClassCastException= to be thrown if something other than a
 number is passed in.  As this exception will bypass our blame
-assignment we need to protect against it.  This form of category error
-\cite{caterror}, failing to predicate all possible argument types that
+assignment we need to protect against it.  This form of category error, failing to predicate all possible argument types that
 the function may be called with, is easily made when the programmer is
 focusing purely on defining the function and contract at hand.  In
 normal Clojure development the error would then be caught either at
@@ -206,7 +208,7 @@ our Design by Contract harness.  We will therefore wish to provide a
 library of basic predicates such as =gt0?= which accept a wider
 category of inputs.
 
-=faulty-sqrt+ demonstrates blame assignment, allowing the user of a
+Looking=faulty-sqrt= demonstrates blame assignment, allowing the user of a
 function to determine whether it is the called or calling function at
 fault. Calling =(faulty-sqrt 1)= will throw an exception declaring
 that the post condition was violated, a fault in the called function,
@@ -257,7 +259,7 @@ contracts to replace that information in an enforceable way without
 the redundancy of unconnected commentary.  We will visit this problem
 in section \ref{selfdocumenting}.
 
-The =deftest= of \ref{lst:ff-use} validates our contract
+The =deftest= of Listing \ref{lst:ff-use} validates our contract
 implementation, demonstrating that exceptions are thrown  should
 either the argument or return value of the stored function be less
 than zero. Similar unit tests are provided for the rest of our
@@ -279,8 +281,30 @@ family =#define=.  Whilst C's macros use a simple pre-processor to
 perform textual substitution, Lisp macros have access to the entire
 Lisp language to perform manipulations.  Macro are run and generate
 code at macro expansion time.  That code and any other regular code is
-then executed at run time.  A full explanation of macros is beyond the
-scope of this dissertation, \cite{Seibel} is recommended as a starting point.
+then executed at run time.  
+
+At its simplest macros make use of the special backquote syntax.  In a
+similar manner to the =quote= special form, the of a backquote
+expression is emitted verbatim.  Unlike the =quote= syntax, individual
+elements of the body can be executed by preceding with a =~=.  The
+following macro emits code to sum the macro arguments:
+
+#+begin_src clojure
+(defmacro pointless-summation [a b]
+ `(+ ~a ~b))
+
+(pointless-summation 3 4)
+#+end_src
+
+The generated code can be examined using =macroexpand= which reveals 
+
+#+begin_src clojure
+(clojure.core/+ 3 4)
+#+end_src
+
+This is the code which will be executed at run time. A full
+explanation of macros is beyond the scope of this dissertation,
+\cite{Seibel} is recommended as a starting point.
 
 We will initially consider functions taking a single argument.
 Extension to multiple argument functions will be achieved through use
@@ -411,77 +435,13 @@ to another macro:
 
 
 ** Blame assignment
-Whilst knowing that an error exists in a program is useful, knowing
-where the error lies is even more important.  The original =wrap=
-function of Listing \ref{lst:wrap} has place holders for pre and post 
-condition violation.
-
-
-
-
-
-
-
-** Meta Framework
-
-So far we have made a number of assumptions about how the framework
-will be used.  Some of these, such as our contract violation reporting
-mechanism =contract-error=, will be inappropriate for many users.
-Taking inspiration from the CLOS Meta Object Protocol \cite{kizcales},
-we look for points of variation and introduce the ability to adapt our
-framework to a user's needs.
-
-
-*** Variation points
-
-The first and most obvious variation point is the action to
-undertake in the event of a contract violation.  Appropriate behaviour
-depends on the application, state of development (developer build or
-customer release) and the error philosophy of the development team.
-More interestingly, different parts of the program may require
-different error handling.  McConnell \cite{codecomplete} takes the
-example of a spreadsheet program where failures in the screen refresh
-code should be handled differently to failures in the underlying
-calculation engine.
-
-Clojure's dynamic variables provide the ability to rebind a variable.
-This is distinct from simply shadowing the original.
-
-TODO Example
-
-
-#+latex: \begin{listing}
-#+begin_src clojure :tangle yes :exports code
-  (defn simple-contract-error [position]
-    (throw (Exception. (str "Contract failed: " position))))
-  
-  (def ^{:doc "Function to call on failure of a contract"}
-    *contract-failure-function* #'simple-contract-error)
-  
-  (defn contract-error [position]
-    (*contract-failure-function* position))
-  
-  
-#+end_src
-#+latex: \end{listing}
-TODO work a citation to Toth in here. More subtly, there is a body of
-work on the way that
-
-
-
-- what about exceptions etc?
-  
-
-
-
-** Blame assignment
 In order to assist the debugging process we wish to able locate the
 code involved in contract failures.  Our intent is to provide that
 information in the same format as produced by tools such as gcc so
 that other development tools can easily utilise the data, perhaps
 taking the user to the corresponding file. File and line information
-is available in clojure, but accessing it will require a short tour of
-some of Clojure's internals.
+is available in Clojure, but accessing it will require a short tour of
+some of the language's internals.
 
 A basic building block of Clojure is the =var=.  From
 clojure.org/vars: "Vars provide a mechanism to refer to a mutable
@@ -523,7 +483,7 @@ a symbol whose value will refer to a Var object.
 
 
 
-TODO - This is in the wrong palce!
+TODO - This is in the wrong place!
 
 #+latex: \begin{listing}[H]
 #+latex: \caption{caption} \label{label}
@@ -575,6 +535,8 @@ stack. The JVM used by Clojure allows us to access the function call
 stack as shown in Listing \ref{stacktrace}
 
 
+TODO: below is not yet a code block: fails to compile.
+
 #+latex: \begin{listing}[H]
 #+latex: \caption{Stack trace} \label{stacktrace}
 #+srcname: label
@@ -593,7 +555,91 @@ stack as shown in Listing \ref{stacktrace}
 #+latex: \end{listing}
 
 Unfortunately here we face a potential performance impact.  The stack
-trace can only be generated at run time
+trace can only be generated at run time.  Because of the delayed
+contract checking of high order functions, we don't know at the time
+we apply a contract whether or not that contract will be fulfilled and
+hence whether or not the stack trace will be needed.  Accordingly we
+must generate a stack trace for every contract application: a
+potentially expensive process.  An approach to mitigating the impact
+of this is described in 
+
+
+** Meta Framework
+
+So far we have made a number of assumptions about how the framework
+will be used.  Some of these, such as our contract violation reporting
+mechanism =contract-error=, will be inappropriate for many users.
+Taking inspiration from the CLOS Meta Object Protocol \cite{kiczales},
+we look for points of variation and introduce the ability to adapt our
+framework to a user's needs.
+
+
+*** Variation points
+
+The first and most obvious variation point is the action to
+undertake in the event of a contract violation.  Appropriate behaviour
+depends on the application, state of development (developer build or
+customer release) and the error philosophy of the development team.
+More interestingly, different parts of the program may require
+different error handling.  McConnell \cite{codecomplete} takes the
+example of a spreadsheet program where failures in the screen refresh
+code should be handled differently to failures in the underlying
+calculation engine.
+
+Clojure's dynamic variables provide the ability to rebind a variable.
+This is distinct from simply shadowing the original; shadowing will
+mask a variable within the lexical scope of the shadow whilst
+rebinding provides the dynamic scope which we need to allow us to pass
+closures around as fast class objects.  When a contract was applied to
+a parameter, a harsh contract failure penalty may have been in place,
+but when we come to use the parameter it may be that the penalty for
+failure has been relaxed in which case a closure over a lexically
+declared error behaviour would give unwanted behaviour. This is
+similar to the common library problem \cite{8ways} where the application
+developer does not wish to be constrained by the error reporting
+mechanism of the library developer.
+
+
+TODO Example
+
+
+#+latex: \begin{listing}
+#+begin_src clojure :tangle yes :exports code
+  (defn simple-contract-error [position]
+    (throw (Exception. (str "Contract failed: " position))))
+  
+  (def ^{:doc "Function to call on failure of a contract"}
+    *contract-failure-function* #'simple-contract-error)
+  
+  (defn contract-error [position]
+    (*contract-failure-function* position))
+  
+  
+#+end_src
+#+latex: \end{listing}
+TODO work a citation to Toth in here. More subtly, there is a body of
+work on the way that
+
+
+
+
+| Variation point        | Options                  |
+|------------------------+--------------------------|
+| Behaviour on violation | termination, log, ignore |
+| Diagnostic behaviour   | stack trace, debug break |
+|                        |                          |
+
+- what about exceptions etc?
+  
+
+
+** Lazy evaluation
+
+As pointed out in \cite{imprecise-exceptions}, the addition of
+exception handling to a lazy language can cause  increased strictness
+by testing a function argument for errors when it's passed rather than
+when it is used.  It is important that our wrap mechanism should not
+cause unwarranted evaluation of lazy sequences. 
 
 \bibliographystyle{alpha}
 \bibliography{dbc}
@@ -611,7 +657,7 @@ Current post condition check is an ugly special case.
 Same problem applies to function args that are fns of more than one
 arg.  This must be symmetric surely.
 
-** lazy sequences?
+
 
 
 
