@@ -114,6 +114,17 @@ model based specifications.}
 
 
 
+
+** Microsoft CLR
+
+An interesting devlopment over the last few years has been the rise of
+the virtual machine as a platform on which to build programming
+languages.  Arguably the two dominant players are Microsoft's Common
+Language Runtime (CLR) and the Java Virtual Machine (JVM).
+
+Microsoft has implemented a version of Eiffel's contract checking in
+the CLR \cite{CCUM}.
+
 ** Contracts in functional languages
 The simple parameter and return value checking that follows from
 Parnas' work has proved useful in the procedural world.  Its utility
@@ -206,10 +217,23 @@ a well defined threading model and, probably most importantly, easy
 access to a large number of libraries through its use of the Java
 Virtual Machine. 
 
+Lisp programs are built from sexprs (symbolic expressions) where a
+sexpr is either an atom, e.g. the integer =42=, or an expression of
+the form =(x . y)= where =x= and =y= are themselves sexprs. Sexprs
+which may be evaluated are known as forms.  There are a number of
+special forms which do not obey the usual processing rules (e.g. =if=
+is a special form to prevent evaluation of both branches). Excluding
+special forms, the processing rules assume that the first element of
+the list is a function and apply that function to the subsequent
+elements of the list.  Should any of the later elements themselves be
+list, they too will be evaluated as a function call:
 
-Primarily a functional language, Clojure uses Software
-Transactional Memory (STM) to provide thread safe state changes. As
-with other Lisps, a powerful macro system is present.  This allows
+#+begin_src clojure
+(+ 1 2 (* 2 3))
+9
+#+end_src 
+
+As with other Lisps, a powerful macro system is present.  This allows
 Clojure code to be treated as data.  Whilst the deep internals of
 Clojure are written in Java, the majority of the language is written
 in terms of itself.  For example =defn=, the symbol usually used to
@@ -235,7 +259,7 @@ Anonymous functions may be introduced with =fn=.
 
 =fn= itself, the core of a function definition, provides support for
 condition checking through meta data.   Since Clojure 1.1 =fn= is
-defined \cite{clojure.fn} as:
+declared \cite{clojure.fn} as:
 
 
 #+begin_src clojure
@@ -244,7 +268,7 @@ defined \cite{clojure.fn} as:
 #+end_src
 
 
-Where the optional condition-map parameter may contain keys for pre
+Where the optional =condition-map= parameter may contain keys for pre
 and post conditions associated with a vector of assertion expressions.
 
 
@@ -338,13 +362,26 @@ the transaction is unknown so method pre and post conditions are
 inappropriate but this hood does provide an ideal point for
 maintaining data invariants.
 
+** Clojure, high order functions and Design by Contract
+
+Clojure provides Eiffel like pre and post condition checking through a
+simple assertion mechanism.  But as a functional programming language,
+function arguments are often functions themselves.  Simple pre and
+post condition assertions can not verify these functional arguments as
+the can only be checked when invoked.  
+
+In order to increase the ability to use Design by Contract techniques
+in Clojure, we intend to construct a library which provides support
+for high order contract checking based on the work of \cite{}.
+
 
 ** The current state of Design by Contract 
 
-Whilst Clojure has basic support for pre and post condition checking, and
-some enthusiastic blogs
-\cite{onclojure-blog}, \cite{objectcommando-blog} about the
-possibilities, examination of typical libraries reveals little usage:
+As we have seen, Clojure has basic support for pre and post condition
+checking, and there are some enthusiastic blogs \cite{onclojure-blog},
+\cite{objectcommando-blog} commenting on the possibilities. Current
+practice does not extend to significant use of these
+techniques. Examination of typical libraries reveals little usage:
 =clojure-contrib= currently (Version 1.2) has one =:pre= check in
 27,000 lines of code. In contrast there are 41 asserts.
 

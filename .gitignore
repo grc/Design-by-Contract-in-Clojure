@@ -47,3 +47,17 @@
 /impl.clj~
 /impl.lol
 /#impl.clj#
+/full.bbl
+/full.blg
+/full.lol
+/full.org~
+/full.pdf
+/full.tex
+/full.tex~
+/impl.txt
+/target/stale/dependencies
+/auto/dbc.el
+/auto/impl.el
+/dbc/.lein-deps-sum
+/dbc/.lein-plugins/checksum
+/dbc/target/stale/dependencies
