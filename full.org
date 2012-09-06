@@ -1,6 +1,6 @@
-#+title:     Design by Contract in Clojure: implementation
+#+title:     Design by Contract in Clojure
 #+AUTHOR:    Giles Chamberlin
-#+OPTIONS:   H:2 num:t toc:nil \n:nil @:t ::t |:t ^:nil -:t f:t *:t <:t
+#+OPTIONS:   H:2 num:t toc:t \n:nil @:t ::t |:t ^:nil -:t f:t *:t <:t
 #+OPTIONS:   TeX:t LaTeX:t skip:nil d:nil todo:t pri:nil tags:not-in-toc
 #+LaTeX_CLASS_OPTIONS: [a4paper, 12pt] 
 #+LATEX_HEADER: \usepackage{parskip} \usepackage{fourier} \usepackage{minted} \usepackage{cite}
@@ -14,6 +14,7 @@
 
 #+LaTeX_HEADER: \usepackage{upquote} \usemintedstyle{bw} 
 
+\renewcommand\listoflistingscaption{Program listings}
 
 \hypersetup{
     colorlinks,%
@@ -26,13 +27,29 @@
     pdftitle=Design by contract in Clojure
 }
 
-\listoflistings
+
 
 
 #+begin_src sh :exports none
   BIBINPUTS=/Users/grc/dissertation/:$BIBINPUTS
   export BIBINPUTS
 #+end_src
+
+
+
+\begin{abstract}
+What hath I wrought?
+\end{abstract}
+
+\pagebreak
+[TABLE-OF-CONTENTS]
+
+\listoflistings
+\pagebreak
+* Introduction
+
+We investigate the use of Clojure's macro system to implement a Design
+by Contract framework for that language.
 
 * A background to Design by Contract
 
@@ -98,18 +115,20 @@ of the functionality is similar to that introduced in Eiffel: pre and
 post conditions are provided for class methods and inheritance is
 supported through the respective  weakening and strengthening of those
 pre and post conditions. The exact nature of the refinement of pre-
-and post conditions differs from that in Eiffel \cite{Toth2010}.  We
+and post conditions differs from that in Eiffel \cite{toth10}.  We
 discuss this in section  \ref{foo}.
 
-JML is written in terms of annotations embedded in the comments of
-the Java program.  These comments are then processed by =jmlc= which
-generates a wrapper class to enforce the contract and delegates the
-implementation to the native java code.  The use of annotated comments
-simplifies the implementation of =jmlc=: it just has to pre-process the
-annotations and generate legal java which is then compiled as usual.
-Unfortunately it has the disadvantage that the usual productivity
-tools associated with a modern development environment: syntax
-highlighting, auto-completion etc. are no longer available. 
+JML is written in terms of annotations embedded in the comments of the
+Java program \cite{jmlc}.  These comments are then processed by =jmlc=
+which generates a wrapper class to enforce the contract and delegates
+the implementation to the native java code.  The use of annotated
+comments simplifies the implementation of =jmlc=: it just has to
+pre-process the annotations and generate legal java which is then
+compiled as usual.  Unfortunately it has the disadvantage that the
+usual productivity tools associated with a modern development
+environment: syntax highlighting, auto-completion etc. are no longer
+available. To the tool, the JML markup appears to be simply comments
+and is processed as such.
 
 A distinctive aspect of JML, in contrast to Eiffel, is its support for
 model based specification based on the work in Larch
@@ -138,7 +157,7 @@ languages.  Arguably the two dominant players are Microsoft's Common
 Language Runtime (CLR) and the Java Virtual Machine (JVM).
 
 Microsoft has implemented a version of Eiffel's contract checking in
-the CLR \cite{CCUM}.
+the CLR \cite{msft-contract},\cite{ECL}.
 
 ** Contracts in functional languages
 The simple parameter and return value checking that follows from
@@ -154,7 +173,7 @@ functional community, it is also of significance in the procedural and
 object oriented communities.  Even in C, function pointers can be
 passed so it could be advantageous to attach a contract to those
 functions.  In object oriented paradigms, patterns such as the Command
-Object \cite{GoF} allow a closure to be passed to a method for later
+Object \cite{gof} allow a closure to be passed to a method for later
 processing; again a candidate for high order contract checking.
 
 
@@ -216,12 +235,12 @@ automatically.}
 
 Invented by John McCarthy in the late 1950's \cite{}, various flavours
 of the Lisp family of languages have hovered around, but never quite
-broken into, the mainstream software development world. Lisps have played
-a significant role in research into areas such as  artificial
-intelligence \cite{} and object oriented programming \cite{} where the
-simplicity of the core language \cite{Paul Graham} combined with its
-colonising approach to new paradigms makes it a powerful vehicle for
-experimentation. 
+broken into, the mainstream software development world. Lisps have
+played a significant role in research into areas such as artificial
+intelligence \cite{paip} and object oriented programming
+\cite{kiczales} where the simplicity of the core language
+\cite{roots-of-lisp} combined with its colonising approach to new
+paradigms makes it a powerful vehicle for experimentation.
 
 
 
@@ -236,23 +255,39 @@ Lisp programs are built from sexprs (symbolic expressions) where a
 sexpr is either an atom, e.g. the integer =42=, or an expression of
 the form =(x . y)= where =x= and =y= are themselves sexprs. Sexprs
 which may be evaluated are known as forms.  There are a number of
-special forms which do not obey the usual processing rules (e.g. =if=
-is a special form to prevent evaluation of both branches). Excluding
-special forms, the processing rules assume that the first element of
-the list is a function and apply that function to the subsequent
-elements of the list.  Should any of the later elements themselves be
-list, they too will be evaluated as a function call:
+special forms which do not obey the usual processing rules described
+below.  For example =if= is a special form to prevent evaluation of
+both branches. Excluding special forms, the processing rules assume
+that the first element of the form is a function and apply that
+function to the subsequent elements of the form.  Should any of the
+later elements themselves be a form, they too will be evaluated
+following these processing rules:
 
 #+begin_src clojure
 (+ 1 2 (* 2 3))
 9
 #+end_src 
 
-As with other Lisps, a powerful macro system is present.  This allows
-Clojure code to be treated as data.  Whilst the deep internals of
-Clojure are written in Java, the majority of the language is written
-in terms of itself.  For example =defn=, the symbol usually used to
-introduce a function definition, is written in terms of =fn=.
+This homoiconicity of Lisps, the fact that the program text itself
+forms a valid lisp data structure, is central to the power of Lisp's
+macro system. The full power of the language is available to
+manipulate the data structures that form the program
+text. Unfortunately the use of the name "macro" for this aspect of the
+language can cause confusion with the well known, and usually
+disliked, C macro system.  It is worth emphasising that, whilst C
+macros provide basic textual substitution in a pre-processor, a lisp
+macro is operating not on the text but on a data structure created
+from the parsed text.  A better comparison would be to a more powerful
+and readable version of C++ template meta programming.  
+
+The Lisp macro system in turn allows much of lisp to be written in
+terms of itself; there is a very restricted set of special forms which
+provide functionality which cannot be obtained by following the
+standard evaluation rules.  This is the case with Clojure; whilst the
+deep internals of the language are written in Java, the majority of
+the language is written in terms of itself.  For example =defn=, the
+symbol usually used to introduce a function definition, is written in
+terms of =fn=.
 
 A typical use of =defn= would be:
 
@@ -265,6 +300,11 @@ A typical use of =defn= would be:
     (Math/sqrt n))
 #+end_src
 
+The use of macros to build layers of functionality on top of the core
+implementation, the ability to treat the program as data, makes Lisp
+an attractive language in which to experiment when we wish to modify
+the behaviour of the language itself.
+
 Anonymous functions may be introduced with =fn=.  
 
 #+begin_src clojure
@@ -273,7 +313,7 @@ Anonymous functions may be introduced with =fn=.
 
 
 =fn= itself, the core of a function definition, provides support for
-condition checking through meta data.   Since Clojure 1.1 =fn= is
+simple condition checking through meta data.   Since Clojure 1.1 =fn= is
 declared \cite{clojure.fn} as:
 
 
@@ -330,6 +370,8 @@ Will return:
 
   <<checked-java-sqrt>>
 #+end_src
+
+
 
 
 ** Anatomy of a clojure precondition
@@ -389,32 +431,6 @@ In order to increase the ability to use Design by Contract techniques
 in Clojure, we intend to construct a library which provides support
 for high order contract checking based on the work of \cite{}.
 
-
-** The current state of Design by Contract 
-
-As we have seen, Clojure has basic support for pre and post condition
-checking, and there are some enthusiastic blogs \cite{onclojure-blog},
-\cite{objectcommando-blog} commenting on the possibilities. Current
-practice does not extend to significant use of these
-techniques. Examination of typical libraries reveals little usage:
-=clojure-contrib= currently (Version 1.2) has one =:pre= check in
-27,000 lines of code. In contrast there are 41 asserts.
-
-A similar picture emerges for the use of validator functions, there
-are no calls to =set-validator!= in =clojure-contrib=.  Refs are in
-use though: the transaction functions used to alter them are called
-several times:
-
-| mutating function | frequency |
-| =ref-set=         |        22 |
-| =alter=           |        11 |
-| =commute=         |         7 |
-
-
-\textit{TODO: Just looking at clojure/contrib may be a bit of a
-narrow.  There's now a list of many clojure libraries at
-clojure-libraries.appspot.com so taking a representative sample from
-there might be fairer.}
 
 
 * A Clojure implementation
@@ -923,6 +939,8 @@ A brief explanation of Clojure's syntax here: =(.method object args)=
 is syntactical sugar for a Java call =object.method(args)= so the
 =callers= function above creates a new =Throwable= object and
 populates its stack trace: a typical Java solution to the problem.
+The final line of =callers= prunes the stack trace, removing function
+calls which are an artefact of the development environment.
 
 For first order contracts this provides a good solution: the contract
 will be evaluated at the same time that it is applied.  In the event
@@ -959,7 +977,7 @@ undertake in the event of a contract violation.  Appropriate behaviour
 depends on the application, state of development (developer build or
 customer release) and the error philosophy of the development team.
 More interestingly, different parts of the program may require
-different error handling.  McConnell \cite{codecomplete} takes the
+different error handling.  McConnell \cite[p.\ 103]{codecomplete} takes the
 example of a spreadsheet program where failures in the screen refresh
 code should be handled differently to failures in the underlying
 calculation engine.  A similar claim that runtime contract failure
@@ -1104,7 +1122,7 @@ As mentioned earlier, using the macro approach described here, it is
 not possible to separate contracts from the implementation of the
 contracted function.  This dramatically reduces modularity - one of
 the key advantages of function programming according to
-\cite{{Hughes84whyfunctional}.
+\cite{Hughes84whyfunctional}.
 
 We have incurred our dependency on the function source code through
 our macro based approach.  The macros will generate modified function
@@ -1127,9 +1145,29 @@ passed in and out but not variables within the function body.
 TODO: thsi had better fail!
 Replacing a parameter to a function with a wrapped version 
 
+Racket, a member of the Scheme/Lisp family, features a sophisticated
+and modular contract mechanism.  This is unsurprising as it comes from
+the authors of \cite{hof}.  Examining their contract implementation
+\cite{racket-src} we see that it makes heavy use of =make-provide=
+syntax transformers \cite{racket-doc-transform}.  These are run when a
+module is loaded and allow the transformation of forms within the
+=provide= expression.  This low level language implementation provides
+greater access than our simplistic extension of the function
+definition, allowing Racket to implement contracts whilst maintaining
+the desired modularity of functional languages.  It also allows Racket
+to follow Eiffel and implement contract verification only at module
+boundaries.  Ignoring arguments about run time speed, the ability for
+a call within a module to violate a contract can be useful,
+particularly where invariants are concerned.
 
-If we step back and consider the details of what happens when a
-function is defined an alternative approach presents itself.
+
+
+Replicating the sophisticated Racket macro system in Clojure is beyond
+the scope of this dissertation, but Racket's approach does provide
+corroborative evidence that a low level approach is appropriate to
+solving the contract modularity problem.  If we step back and consider
+the details of what happens when a function is defined an alternative
+approach presents itself.
 
 At the heart of a lisp implementation is the function =eval=.  Every
 form which is not either a special form or a macro is considered to be
@@ -1143,16 +1181,38 @@ wrapped version should achieve our goal.
 
 
 
-* Contract verification points
-
-One decision to be made when implementing a contract checking system
-is whether contracts should be enforced for all calls to a function or
-just those which cross a module boundary.  Ignoring arguments about
-run time speed, the ability for a call within a module to violate a
-contract can be useful, particularly where invariants are concerned.
 
 
+* Conclusions
 
+** The current state of Design by Contract 
+
+As we have seen, Clojure has basic support for pre and post condition
+checking, and there are some enthusiastic blogs \cite{onclojure-blog},
+\cite{objectcommando-blog} commenting on the possibilities. But
+despite this, current practice does not extend to significant use of
+these techniques. Examination of typical libraries reveals little
+usage: =clojure-contrib= currently (Version 1.2) has one =:pre= check
+in 27,000 lines of code. In contrast there are 41 asserts.
+
+A similar picture emerges for the use of validator functions, there
+are no calls to =set-validator!= in =clojure-contrib=.  Refs are in
+use though: the transaction functions used to alter them are called
+several times:
+
+| mutating function | frequency |
+| =ref-set=         |        22 |
+| =alter=           |        11 |
+| =commute=         |         7 |
+
+
+\textit{TODO: Just looking at clojure/contrib may be a bit of a
+narrow.  There's now a list of many clojure libraries at
+clojure-libraries.appspot.com so taking a representative sample from
+there might be fairer.}
+
+
+\pagebreak
 \bibliographystyle{alpha}
 \bibliography{dbc}
 
@@ -1178,6 +1238,7 @@ arg.  This must be symmetric surely.
 There's a contracts library at http://www.fogus.me/fun/trammel/docs.html
 
 **  Runtime vs Compile time contract assignment
+
 
 
 Is there any benefit in using hooks to give the ability to set contracts at run time?
@@ -1208,3 +1269,20 @@ Microsoft Corporation January 8, 2012
 
 Inability to make contracts plugin to function.  Flies againdt
 modularity argument of "Why Functional Programming matters", Hughes 1990
+
+
+
+
+#clojure: <2012-08-03 Fri> 
+<ohpauleez> 1.) People move code around like clay - they don't quite think as
+	    far ahead or careful as someone like Rich might
+<ohpauleez> it's hard to come up with the constraints of a system that you
+	    yourself aren't even sure about  [16:19]
+<ohpauleez> 2.) Creating contraints on domain input and output takes practice,
+	    just like writing good tests
+<ohpauleez> BUT
+<ohpauleez> you end up capturing these domains in your tests anyway, you might
+	    as well enforce them and program defensively
+<ohpauleez> Programming to an interface instead of an implementation helps to
+	    avoid pointless dependencies between calling pieces of code
+

@@ -61,3 +61,4 @@
 /dbc/.lein-deps-sum
 /dbc/.lein-plugins/checksum
 /dbc/target/stale/dependencies
+/full.txt
