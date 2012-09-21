@@ -1,3 +1,4 @@
+
 #+title:     Design by Contract in Clojure
 #+AUTHOR:    Giles Chamberlin
 #+OPTIONS:   H:2 num:t toc:t \n:nil @:t ::t |:t ^:nil -:t f:t *:t <:t
@@ -23,8 +24,8 @@
     linkcolor=black,%
     urlcolor=black,
     pdfauthor=Giles Chamberlin,
-    pdfsubject=Draft chapter for M.Sc. dissertation,
-    pdftitle=Design by contract in Clojure
+    pdfsubject=Submission for M.Sc. in Software Engineering
+    pdftitle=Design by Contract in Clojure
 }
 
 
@@ -1082,6 +1083,14 @@ cause unwarranted evaluation of lazy sequences.
 
 
 
+** Post conditions and exceptions
+The post condition handling we have considered so far is limited to
+the case of a normal return from the function.  As we have seen,
+Clojure integrates tightly with Java and can throw Java exceptions or
+call Java code which in turn throws an exception.  We would like to be
+able to impose post condition contracts on this alternative exit.
+
+
 ** Clojure and object oriented programming 
 
 Clojure supports two separate approaches to object oriented
@@ -1116,7 +1125,10 @@ violations.
 
 
 
-* Modularity
+
+
+* Discussion
+** Modularity
 
 As mentioned earlier, using the macro approach described here, it is
 not possible to separate contracts from the implementation of the
@@ -1181,10 +1193,6 @@ wrapped version should achieve our goal.
 
 
 
-
-
-* Conclusions
-
 ** The current state of Design by Contract 
 
 As we have seen, Clojure has basic support for pre and post condition
@@ -1205,11 +1213,41 @@ several times:
 | =alter=           |        11 |
 | =commute=         |         7 |
 
+To endeavour to promote a more complicated contract checking mechanism
+on a community which has not adopted first order contract checking is
+unlikely to be worthwhile.  So why has the Clojure, and wider,
+community not adopted Design by Contract?  Whilst I am unaware of any
+formal studies into this, a widely heard response
+\cite{http://the-dusty-deck.blogspot.co.uk/2011/08/why-dont-you-use-design-by-contract.html},
+\cite{irc-clojure} combine the difficulty of elucidating whilst creating
+a function and the difficulty in then reusing or refactoring this
+constrained code. An extreme example of this is the Ariane 5 rocket
+failure.  The software was based on that used in the Ariane 4
+programme.  Unfortunately the rocket hardware had improved to such an
+extent that a previously impossible flight trajectory could now be
+achieved.  This resulted in an integer overflow, which was not
+protected as after inspection with the original hardware in mind, it
+was determined that the situation could never arise.  In order to
+preserve CPU cycles, checks were limited to those cases where it was
+deemed possible for the errors to occur.
 
-\textit{TODO: Just looking at clojure/contrib may be a bit of a
-narrow.  There's now a list of many clojure libraries at
-clojure-libraries.appspot.com so taking a representative sample from
-there might be fairer.}
+The enquiry into the failure
+recommended\cite{http://www.di.unito.it/~damiani/ariane5rep.html}:
+ 
+"R12 Give the justification documents the same attention as
+code. Improve the technique for keeping code and its justifications
+consistent."
+
+The idea being that, on reuse of the Ariane 4 code, the assumptions
+and justifications could be readily seen.  But the prebolem of keeping
+documentation and code in synchronisation is a long known one, indeed
+one of the drivers behind Eiffel's short form.  So could we not
+document our assumptions in the code as contracts and then,
+independently, determine whether or not to enforce those contracts?
+
+
+
+* Conclusions
 
 
 \pagebreak
