@@ -1,7 +1,8 @@
 
+
 #+title:     Design by Contract in Clojure
 #+AUTHOR:    Giles Chamberlin
-#+OPTIONS:   H:2 num:t toc:t \n:nil @:t ::t |:t ^:nil -:t f:t *:t <:t
+#+OPTIONS:   H:3 num:t toc:t \n:nil @:t ::t |:t ^:nil -:t f:t *:t <:t
 #+OPTIONS:   TeX:t LaTeX:t skip:nil d:nil todo:t pri:nil tags:not-in-toc
 #+LaTeX_CLASS_OPTIONS: [a4paper, 12pt] 
 #+LATEX_HEADER: \usepackage{parskip} \usepackage{fourier} \usepackage{minted} \usepackage{cite}
@@ -49,8 +50,8 @@ What hath I wrought?
 \pagebreak
 * Introduction
 
-We investigate the use of Clojure's macro system to implement a Design
-by Contract framework for that language.
+To Be Completed
+
 
 * A background to Design by Contract
 
@@ -117,7 +118,7 @@ post conditions are provided for class methods and inheritance is
 supported through the respective  weakening and strengthening of those
 pre and post conditions. The exact nature of the refinement of pre 
 and post conditions differs from that in Eiffel \cite{toth10}.  We
-discuss this in section  \ref{foo}.
+discuss this in section  \ref{meta}.
 
 JML is written in terms of annotations embedded in the comments of the
 Java program \cite{jmlc}.  These comments are then processed by =jmlc=
@@ -763,7 +764,7 @@ argument with its wrapped equivalent.
 
 The overall result of this macro is to create a function definition
 with every use of an argument wrapped in a call to the =wrap= function
-of Figure \ref{wrap}. 
+of Figure \ref{lst:wrap}. 
 
 
 As well as checking the argument to the function =fn-name= defined
@@ -782,7 +783,7 @@ Using this macro we can simplify the definitions of =ff-use= and
 
 
 #+latex: \begin{listing}[H]
-#+latex: \caption{=ff-save= implemented with the contract macro.} 
+#+latex: \caption{ff-save implemented with the contract macro.} 
 #+latex: \label{lst:ff-use2}
 #+srcname: label
 #+begin_src clojure :tangle yes :exports code
@@ -948,7 +949,7 @@ information we wish to present to our users.  To provide an accessor
 to this information we use the following macro:
 
 #+latex: \begin{listing}[H]
-#+latex: \caption{caption} \label{lst:source-loc}
+#+latex: \label{lst:source-loc}
 #+srcname: label
 #+begin_src clojure :tangle yes :exports code
   
@@ -1020,6 +1021,11 @@ Accordingly we must generate a stack trace for every contract
 application: a potentially expensive process.  An approach to
 mitigating the impact of this is described in \ref{meta}.
 
+** Contract Documentation
+\label{selfdocumenting}
+To be completed - brief description of contracts as meta data to
+function, functions to print that meta data
+
 ** Meta Framework
 
 So far we have made a number of assumptions about how the framework
@@ -1028,8 +1034,6 @@ mechanism =contract-error=, will be inappropriate for many users.
 Taking inspiration from the CLOS Meta Object Protocol \cite{kiczales},
 we look for points of variation and introduce the ability to adapt our
 framework to a user's needs.
-
-*** Variation points
 
 The first and most obvious variation point is the action to
 undertake in the event of a contract violation.  Appropriate behaviour
@@ -1058,7 +1062,8 @@ mechanism of the library developer.
 
 
 
-#+latex: \begin{listing}\label{lst:contract-failure}
+#+latex: \begin{listing}
+#+latex: \caption{Customising failure behaviour} \label{lst:contract-failure}
 #+begin_src clojure :tangle yes :exports code
   (defn simple-contract-error [position]
     (throw (Exception. (str "Contract failed: " position))))
@@ -1079,7 +1084,7 @@ can bind this symbol to a function providing the required behaviour.
 The =*= decoration on the function name, often called ear muffs, is
 purely a conventional notation to denote a dynamic variable.
 
-We could use different implementations of =contract-error= to generate
+We \label{meta} could use different implementations of =contract-error= to generate
 the expensive stack traces of Listing \ref{stacktrace} or a simpler,
 but less informative implementation.
   
@@ -1112,7 +1117,7 @@ truncating =take=.
 #+latex: \end{listing}
 
 We now provide a default implementation and an implementation of their
-of their rightslice operation which combines locations, interchanging
+of their $\rightslice$ operation which combines locations, interchanging
 positive and negative locations when necessary.
 
 #+latex: \begin{listing}
@@ -1264,11 +1269,12 @@ To endeavour to promote a more complicated contract checking mechanism
 on a community which has not adopted first order contract checking is
 unlikely to be worthwhile.  So why has the Clojure, and wider,
 community not adopted Design by Contract?  Whilst I am unaware of any
-formal studies into this, a widely heard response
-\cite{http://the-dusty-deck.blogspot.co.uk/2011/08/why-dont-you-use-design-by-contract.html},
-\cite{irc-clojure} combine the difficulty of elucidating whilst creating
-a function and the difficulty in then reusing or refactoring this
-constrained code. An extreme example of this is the Ariane 5 rocket
+formal studies into this, a widely heard response \cite{why-dont},
+\cite{irc-clojure} combine the difficulty of identifying the relevant
+contracts whilst creating a function and the difficulty in then reusing
+or refactoring this constrained code. 
+
+An extreme example of the difficulty of reuse is the Ariane 5 rocket
 failure.  The software was based on that used in the Ariane 4
 programme.  Unfortunately the rocket hardware had improved to such an
 extent that a previously impossible flight trajectory could now be
@@ -1278,16 +1284,14 @@ was determined that the situation could never arise.  In order to
 preserve CPU cycles, checks were limited to those cases where it was
 deemed possible for the errors to occur.
 
-The enquiry into the failure
-recommended\cite{}
-#qHP://www.di.unito.it/~damiani/ariane5rep.html}:
+The enquiry into the failure recommended\cite{ariane}
  
 "R12 Give the justification documents the same attention as
 code. Improve the technique for keeping code and its justifications
 consistent."
 
 The idea being that, on reuse of the Ariane 4 code, the assumptions
-and justifications could be readily seen.  But the prebolem of keeping
+and justifications could be readily seen.  But the problem of keeping
 documentation and code in synchronisation is a long known one, indeed
 one of the drivers behind Eiffel's short form.  So could we not
 document our assumptions in the code as contracts and then,
@@ -1297,6 +1301,7 @@ independently, determine whether or not to enforce those contracts?
 
 * Conclusions
 
+To Be Completed
 
 \pagebreak
 \bibliographystyle{alpha}
