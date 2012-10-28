@@ -243,47 +243,123 @@ additional information for higher order functions.
 
 
 
-* A brief introduction to Lisps and Clojure
+* A brief introduction to Clojure
 
-Invented by John McCarthy in the late 1950's \cite{}, various flavours
-of the Lisp family of languages have hovered around, but never quite
-broken into, the mainstream software development world. Lisps have
-played a significant role in research into areas such as artificial
-intelligence \cite{paip} and object oriented programming
-\cite{kiczales} where the simplicity of the core language
+Clojure, first introduced in 2007, is according to its inventor:
+
+- A Lisp
+
+- for functional programming
+
+- symbiotic with an established platform
+
+- designed for concurrency\cite{rationale}
+
+I chose to use Clojure as the platform for my investigation of Design
+by Contract in part because of Lisp's flexibility for such experiments
+and in part through a desire to get to know Clojure better: my
+professional work developing video conferencing infrastructure was
+repeatedly showing the need for multi-core concurrency and the ability
+to integrate easily with a large body of sophisticated and specialised
+libraries. Being built on the Java Virtual Machine (JVM), Clojure has
+outstanding access to libraries and is designed for concurrency 
+
+# Work i taht its built on the JVM
+
+Clojure is a member of the Lisp family of languages whose common
+ancestor was invented by John McCarthy in the late 1950's \cite{}.
+Various flavours of the Lisp family of languages have hovered around,
+but never quite broken into, the mainstream software development
+world. Lisps have played a significant role in research into areas
+such as artificial intelligence \cite{paip} and object oriented
+programming \cite{kiczales} where the simplicity of the core language
 \cite{roots-of-lisp} combined with its colonising approach to new
 paradigms makes it a powerful vehicle for experimentation.
 
 
+** Anatomy of a Clojure program
 
-We have chosen to use Clojure as the basis for our investigation in to
-Design by Contract.  Clojure is attracting a resurgence of interest in
-Lisp as it provides a reasonably pure functional programming language,
-a well defined threading model and, probably most importantly, easy
-access to a large number of libraries through its use of the Java
-Virtual Machine. 
+Like other Lisps, Clojure programs are built from sexprs (symbolic
+expressions) where a sexpr is either an atom, e.g. the integer =42=,
+or an expression of the form =(x . y)= where =x= and =y= are
+themselves sexprs.  Clojure lists are a sequence of such sexprs
+terminating in =nil=.  Since these form the basic building block of the
+language, a short hand notation is provided: =((a . b) . nil)= is a
+proper list and is usually represented as =(a b)=.
 
-** Anatomy of a Lisp program
-
-Lisp programs are built from sexprs (symbolic expressions) where a
-sexpr is either an atom, e.g. the integer =42=, or an expression of
-the form =(x . y)= where =x= and =y= are themselves sexprs. Sexprs
-which may be evaluated are known as forms.  There are a number of
-special forms which do not obey the usual processing rules described
-below.  For example =if= is a special form to prevent evaluation of
-both branches. Excluding special forms, the processing rules assume
-that the first element of the form is a function and apply that
-function to the subsequent elements of the form.  Should any of the
-later elements themselves be a form, they too will be evaluated
-following these processing rules:
+Sexprs which may be evaluated are known as forms.  With a few
+exceptions described later, the processing rules assume that the first
+element of the form is a function and apply that function to the
+subsequent elements of the form.  Should any of the later elements
+themselves be a form, they too will be evaluated following these
+processing rules:
 
 #+begin_src clojure
 (+ 1 2 (* 2 3))
 9
 #+end_src 
 
-This homoiconicity of Lisps, the fact that the program text itself
-forms a valid Lisp data structure, is central to the power of Lisp's
+
+The processing exceptions mentioned above are known as "special
+forms". There are a number of these which do not obey the usual
+processing rules.  Consider For example an =if= statement:
+
+#+begin_src clojure
+  (if (< 1 2)                         ; 1
+    (print "Normal maths applies")    ; 2
+    (print "Strange maths applies"))  ; 3
+#+end_src
+
+The intent is that, if the test on the first line is true execute line
+2, otherwise line 3.  Following the rules described above we need to
+evaluate all the arguments to =if= before passing them to the form.
+This would result in two, contradictory, messages being printed.  The
+lack of support for lazy evaluation \cite{lazy} in Clojure means that
+we to make =if= an exception to the normal processing rues: a special
+form.
+
+
+** Other data structures
+
+Classical Lisps use lists, =(...)= as their data structure of
+choice.  Clojure extends the code-as-data system to include maps and
+vectors.  This means that the reader, that part of the system
+responsible for parsing the input, prior to evaluation, has innate
+knowledge of these structures, allowing them to be used in the macro
+system described later.
+
+Maps, similar to Python's dictionaries, are a sequence of key value
+pairs.  
+
+#+begin_src clojure
+  (def map-example {"one" 1 "two" 2})
+#+end_src
+
+As a map is also a valid function, map lookup may be performed using
+the key:
+
+#+begin_src clojure
+  (map-example "one")
+ > 1
+#+end_src
+
+Clojure also supports vectors as a first class data structure, indeed
+it is the data structure of choice in many cases such as passing
+arguments to a function.  Denoted by =[...]=, they too are a valid
+function:
+
+#+begin_src clojure
+  (def vector-example [10 20 30 40])
+  (vector-example  2)
+  > 30
+#+end_src
+
+** Macros
+
+
+All Clojure programs consist of lists of sexprs.  This homoiconicity
+of Lisps, the fact that the program text itself forms a valid Lisp
+data structure, is central to the power of Lisp's - and Clojure's -
 macro system. The full power of the language is available to
 manipulate the data structures that form the program
 text. Unfortunately the use of the name "macro" for this aspect of the
@@ -294,6 +370,8 @@ macro is operating not on the text but on a data structure created
 from the parsed text.  A better comparison would be that Lisp macros
 provide a more powerful, and readable, version of C++ template meta
 programming.
+
+
 
 The Lisp macro system in turn allows much of Lisp to be written in
 terms of itself; there is a very restricted set of special forms which
@@ -390,7 +468,7 @@ Will result in:
 
 
 
-** Clojure's built in pre and post conditions
+*** Clojure's built in pre and post conditions
 
 The usual way of introducing a function into a Clojure environment,
 =defn= is a macro which can accept pre and post conditions..
@@ -424,7 +502,7 @@ stack frames in order to optimise execution so a violating caller may
 not appear in the list of blame candidates.
 
 
-** Mutable data
+*** Mutable data
 
 Clojure provides support for mutable data through the use of
 transactional references: =ref='s.  Modifications to the data must be
