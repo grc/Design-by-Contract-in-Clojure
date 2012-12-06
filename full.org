@@ -6,7 +6,7 @@
 #+OPTIONS:   TeX:t LaTeX:t skip:nil d:nil todo:t pri:nil tags:not-in-toc
 #+LaTeX_CLASS_OPTIONS: [a4paper, 12pt, twoside] 
 #+LATEX_HEADER: \usepackage{parskip} \usepackage{fourier} \usepackage{minted} \usepackage{cite}
-#+LATEX_HEADER: \usepackage{hyperref} \usepackage{stmaryrd}
+#+LATEX_HEADER: \usepackage{hyperref} \usepackage{stmaryrd} \usepackage{tikz}
 
 # stmaryrd used for \rightslice character used in Hinze paper.
 
@@ -262,37 +262,70 @@ professional work developing video conferencing infrastructure was
 repeatedly showing the need for multi-core concurrency and the ability
 to integrate easily with a large body of sophisticated and specialised
 libraries. Being built on the Java Virtual Machine (JVM), Clojure has
-outstanding access to libraries and is designed for concurrency 
-
-# Work i taht its built on the JVM
+outstanding access to libraries and is designed with concurrency in
+mind.
 
 Clojure is a member of the Lisp family of languages whose common
 ancestor was invented by John McCarthy in the late 1950's \cite{}.
-Various flavours of the Lisp family of languages have hovered around,
-but never quite broken into, the mainstream software development
-world. Lisps have played a significant role in research into areas
-such as artificial intelligence \cite{paip} and object oriented
-programming \cite{kiczales} where the simplicity of the core language
+Various flavours of Lisp have hovered around, but never quite broken
+into, the mainstream software development world. Lisps have played a
+significant role in research into areas such as artificial
+intelligence \cite{paip} and object oriented programming
+\cite{kiczales} where the simplicity of the core language
 \cite{roots-of-lisp} combined with its colonising approach to new
 paradigms makes it a powerful vehicle for experimentation.
 
 
 ** Anatomy of a Clojure program
-
+ 
 Like other Lisps, Clojure programs are built from sexprs (symbolic
 expressions) where a sexpr is either an atom, e.g. the integer =42=,
-or an expression of the form =(x . y)= where =x= and =y= are
-themselves sexprs.  Clojure lists are a sequence of such sexprs
-terminating in =nil=.  Since these form the basic building block of the
-language, a short hand notation is provided: =((a . b) . nil)= is a
-proper list and is usually represented as =(a b)=.
+or an expression of the form =(x .\\nbsp y)= where =x= and =y= are
+themselves sexprs.  The notation =(x .\\nbsp y)= denotes a cons cell,
+terminology derived from the lisp function used to construct it.  It
+represents an ordered pair of values and is typically used to build
+linked lists.  In such a case the second value (known as the =cdr= of
+the cell) points to the next cons cell.  Proper lists are terminated
+when the =cdr= is nil. Figure \ref{fig:cons} shows the construction of
+a proper list =(x .\nbsp (y .\nbsp nil))=
+
+
+# cons cell diagram
+\begin{figure}
+\label{fig:cons}
+\centering
+\usetikzlibrary[arrows]
+\begin{tikzpicture}
+      \node (xcar) at ( 0,2) [shape=rectangle,draw, minimum size = 10mm] {};
+      \node (xvalue) at ( 0, 0) {x};
+      \node (xcdr) at ( 10mm, 2)  [shape=rectangle,draw, minimum size=10mm] {};
+      
+      \node (ycar) at (40mm, 2) [shape=rectangle,draw, minimum size = 10mm] {};
+      \node (ycdr) at (50mm, 2) [shape=rectangle,draw, minimum size = 10mm] {};
+      \node (yvalue) at (40mm, 0) {y};
+
+      \node (nil) at (80mm, 2) {nil};
+
+      \draw[ *->] (xcar.center) -- (xvalue);
+      \draw[ *->] (xcdr.center) -- (ycar);
+      \draw[*->] (ycar.center) -- (yvalue);
+      \draw[*->] (ycdr.center) -- (nil);
+\end{tikzpicture}
+
+\caption{Lisp cons cells and lists}
+\end{figure}
+
+Since lists form the basic building block of the language, and are
+thus very common, a short hand notation is provided. The proper list
+=(x . (y . nil))= is usually represented as =(x y)=.
 
 Sexprs which may be evaluated are known as forms.  With a few
 exceptions described later, the processing rules assume that the first
 element of the form is a function and apply that function to the
-subsequent elements of the form.  Should any of the later elements
-themselves be a form, they too will be evaluated following these
-processing rules:
+subsequent elements of the form.  Lisps follow eager evaluation of
+function arguments, so should any of the later elements themselves be
+a form, they too will be evaluated before being passed to the original
+function:
 
 #+begin_src clojure
 (+ 1 2 (* 2 3))
