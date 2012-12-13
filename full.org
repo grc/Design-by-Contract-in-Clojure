@@ -247,13 +247,17 @@ additional information for higher order functions.
 
 Clojure, first introduced in 2007, is according to its inventor:
 
-- A Lisp
+\begin{quote}
+\begin{itemize}
+\item A Lisp
 
-- for functional programming
+\item for functional programming
 
-- symbiotic with an established platform
+\item symbiotic with an established platform
 
-- designed for concurrency\cite{rationale}
+\item designed for concurrency\cite{rationale}
+\end{itemize}
+\end{quote}
 
 I chose to use Clojure as the platform for my investigation of Design
 by Contract in part because of Lisp's flexibility for such experiments
@@ -280,14 +284,17 @@ paradigms makes it a powerful vehicle for experimentation.
  
 Like other Lisps, Clojure programs are built from sexprs (symbolic
 expressions) where a sexpr is either an atom, e.g. the integer =42=,
-or an expression of the form =(x .\\nbsp y)= where =x= and =y= are
-themselves sexprs.  The notation =(x .\\nbsp y)= denotes a cons cell,
-terminology derived from the lisp function used to construct it.  It
-represents an ordered pair of values and is typically used to build
-linked lists.  In such a case the second value (known as the =cdr= of
-the cell) points to the next cons cell.  Proper lists are terminated
-when the =cdr= is nil. Figure \ref{fig:cons} shows the construction of
-a proper list =(x .\nbsp (y .\nbsp nil))=
+or an expression of the form 
+\begin{texttt}(x\space.\space{}y)\end{texttt}  
+where =x= and =y= are themselves sexprs.  The notation 
+\begin{texttt}(x\space.\space{}y)\end{texttt}  
+denotes a cons cell, terminology derived from the lisp function used
+to construct it.  It represents an ordered pair of values and is
+typically used to build linked lists.  In such a case the second value
+(known as the =cdr= of the cell) points to the next cons cell.  Proper
+lists are terminated when the =cdr= is nil. Figure \ref{fig:cons}
+shows the construction of a proper list 
+\begin{texttt}((x\space.\space{}y)\space{}nil)\end{texttt} 
 
 
 # cons cell diagram
@@ -317,7 +324,9 @@ a proper list =(x .\nbsp (y .\nbsp nil))=
 
 Since lists form the basic building block of the language, and are
 thus very common, a short hand notation is provided. The proper list
-=(x . (y . nil))= is usually represented as =(x y)=.
+\begin{texttt}((x\space.\space{}y)\space{}nil)\end{texttt} 
+is usually represented as 
+\begin{texttt}(x\space{}y)\end{texttt}.
 
 Sexprs which may be evaluated are known as forms.  With a few
 exceptions described later, the processing rules assume that the first
@@ -536,6 +545,32 @@ not appear in the list of blame candidates.
 
 
 *** Mutable data
+
+State, mutable data, is at odds with the "designed for concurrency"
+goal \cite{rationale} of Clojure.  If two methods use and can
+modify the same piece of data then to allow the two methods to run
+concurrently requires some form of concurrency control.  Typically
+this concurrency control takes the form of a locking strategy: before
+modifying mutable data the method must acquire a lock, releasing it
+when the operation is complete.  Improper locking strategies --- method
+1 acquires lock A, then lock B, method 2 B then A --- can result in
+deadlock.  More fundamentally, lock based strategies are not
+composable \cite{Harris}: 
+\begin{quote} 
+Perhaps the most fundamental objection [...] is that lock-based
+programs do not compose: correct fragments may fail when
+combined. For example, consider a hash table with thread-safe insert
+and delete operations. Now suppose that we want to delete one item A
+from table t1, and insert it into table t2; but the intermediate
+state (in which neither table contains the item) must not be visible
+to other threads. Unless the implementor of the hash table
+anticipates this need, there is simply no way to satisfy this
+requirement. [...] In short, operations that are individually
+correct (insert, delete) cannot be composed into larger correct
+operations.
+\end{quote}
+
+# —Tim Harris et al., "Composable Memory Transactions", Section 2: Background, pg.2
 
 Clojure provides support for mutable data through the use of
 transactional references: =ref='s.  Modifications to the data must be
@@ -1299,13 +1334,88 @@ violations.
 
 
 
+* A worked example
+
+My day job is to develop software for video conferencing
+infrastructure; effectively a telephone exchange for video
+conferencing.  In order to test this we use a number of video
+endpoints (analogous to a telephone) to place calls in to the
+system.  Interoperability between our equipment and the various
+endpoint manufacturers is an important requirement so we test using a
+range of endpoints.
+
+The endpoints all nominally speak the standardised protocols, SIP and
+H.323, over the LAN to the infrastructure equipment.  They also
+provide APIs to allow automation of call setup and tear down as well
+as status reporting. These APIs vary widely, not only between
+manufacturers but also between product lines from a single
+manufacturer.
+
+We will provide a series of device specific functions to request an
+endpoint to make a call setup attempt. These will use simple first
+order contracts to check their pre and post conditions: have they
+been given a valid endpoint address and a valid SIP URI, are they
+returning an agreed value.
+
+Another suite of device specific functions will query the endpoint as
+to whether or not it is actually in a call: not all call setups are
+answered.
+
+For a simple call test we wish to place a call to an alias which,
+barring product bugs, should be answered within 5 seconds.  We
+therefore combine the call setup and status query in a blocking
+function which will return on successful call setup, call setup
+failure or failure to establish a call within the given time limit.
+This takes the two device specific functions as arguments.
+
+
+#+begin_src clojure :tangle yes :exports code
+    
+    (defn sip-uri? [s]
+      "True if s is a plausible SIP URI.  This is a very weak implementation, 
+  merely checking for the presence of @, a real version should consider using 
+  javax.sip.address"
+      (and
+       (string? s)
+       (substring "@" s)))
+    
+    (import sun.net.util.IPAddressUtil)
+    (defn ip-address? [s]
+      "True if s is a plausible string representation of an IPv4 address"
+      (and
+       (string? s)
+       (IPAddressUtil/isIPv4LiteralAddress s))) 
+    
+    (defn call-setup-hdx [endpoint-ip alias]
+      "Place a call setup attempt from the HDX at `endpoint-ip' to the SIP URI `alias'"
+      ;; code omitted
+      )
+    
+    
+    (defn call-established-hdx? [endpoint-ip timeout]
+      "Waits up to `timeout' to see if the HDX endpoint at `endpoint-ip' is in a call"
+      ;; code omitted
+      )
+    
+    
+    
+    ;; setup-fn takes an valid SIP URI and returns {:ok,:setup-failed}
+    ;; established-fn? returns {true, nil}
+    ;; alias is a SIP URI
+    (defn blocking-setup [setup-fn, established-fn?, alias]
+      (setup-fn alias)
+      (established-fn? 5))
+#+end_src
+
+
+
 * Discussion
 ** Modularity
 
 As mentioned earlier, using the macro approach described here, it is
 not possible to separate contracts from the implementation of the
 contracted function.  This dramatically reduces modularity - one of
-the key advantages of function programming according to
+the key advantages of functional programming according to
 \cite{hughes}.
 
 We have incurred our dependency on the function source code through
@@ -1482,7 +1592,8 @@ modularity argument of "Why Functional Programming matters", Hughes 1990
 
 
 #clojure: <2012-08-03 Fri> 
-<ohpauleez> 1.) People move code around like clay - they don't quite think as
+<ohpauleez> 1.)
+People move code around like clay - they don't quite think as
 	    far ahead or careful as someone like Rich might
 <ohpauleez> it's hard to come up with the constraints of a system that you
 	    yourself aren't even sure about  [16:19]
