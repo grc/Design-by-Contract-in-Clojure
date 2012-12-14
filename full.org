@@ -1368,13 +1368,14 @@ function which will return on successful call setup, call setup
 failure or failure to establish a call within the given time limit.
 This takes the two device specific functions as arguments.
 
-
+#+latex: \begin{listing}[H]
+#+latex: \caption{Example contract use} 
 #+begin_src clojure :tangle yes :exports code
     
     (defn sip-uri? [s]
       "True if s is a plausible SIP URI.  This is a very weak implementation, 
-  merely checking for the presence of @, a real version should consider using 
-  javax.sip.address"
+       merely checking for the presence of @, a real version should consider using 
+       javax.sip.address"
       (and
        (string? s)
        (substring "@" s)))
@@ -1397,17 +1398,19 @@ This takes the two device specific functions as arguments.
       ;; code omitted
       )
     
-    
-    
+#+end_src
+#+latex: \end{listing}
+
+
+#+BEGIN_SRC clojure
     ;; setup-fn takes an valid SIP URI and returns {:ok,:setup-failed}
     ;; established-fn? returns {true, nil}
     ;; alias is a SIP URI
     (defn blocking-setup [setup-fn, established-fn?, alias]
       (setup-fn alias)
       (established-fn? 5))
-#+end_src
 
-
+#+END_SRC    
 
 * Discussion
 ** Modularity
