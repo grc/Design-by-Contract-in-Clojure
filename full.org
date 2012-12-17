@@ -32,7 +32,7 @@
     urlcolor=black,
     pdfauthor=Giles Chamberlin,
     pdfsubject=Submission for M.Sc. in Software Engineering
-    pdftitle=Design by Contract in Clojure
+    pdftitle=Design by Contract in Conjure
 }
 
 
@@ -755,14 +755,18 @@ positive.
 #+srcname: lst:fo
 #+begin_src clojure :tangle yes :exports code
   (defn gt0? [x]
-      (and
-       (number? x)
-       (pos? x)))
+    (and
+     (number? x)
+     (pos? x)))
   
   (def faulty-sqrt
-     (wrap (make-contract gt0? gt0?)
-           (fn [not-used] -1)
-           "Post condition violated" "Pre Condition violated"))
+    (wrap (make-contract gt0? gt0?)
+          (fn [not-used] -1)
+          "Post condition violated" "Pre condition violated"))
+  
+  (deftest faulty-sqrt-test
+    (is (thrown-with-msg? java.lang.Exception #"Post condition" (faulty-sqrt 1)))
+    (is (thrown-with-msg? java.lang.Exception #"Pre condition" (faulty-sqrt 0))))
 #+end_src
 #+latex: \end{listing}
 
@@ -944,24 +948,24 @@ Using this macro we can simplify the definitions of =ff-use= and
 #+end_src
 #+latex: \end{listing}
 #+begin_src clojure :tangle yes :exports none
- 
- (deftest ff-example-2 ;\ref{line:test}
-    (ff-save-2 (fn [not-used] 50))
-    (is (= 50 (ff-use-2 42)))
-    (is (thrown? java.lang.Exception (ff-use-2 -1)))
-    (ff-save-2 (fn [not-used] -1))
-    (is (thrown? java.lang.Exception (ff-use-2 42))))
-
+    
+    (deftest ff-example-2 ;\ref{line:test}
+       (ff-save-2 (fn [not-used] 50))
+       (is (= 50 (ff-use-2 42)))
+       (is (thrown? java.lang.Exception (ff-use-2 -1)))
+       (ff-save-2 (fn [not-used] -1))
+       (is (thrown? java.lang.Exception (ff-use-2 42))))
+    
     (defmacro defcontract-x [fn-name a c post body]
-      (let [wrapped-arg {a `(wrap ~c ~a "p" "n")} ] 
+      (let [wrapped-arg {a `(wrap ~c ~a  "post condition of arg" " pre condition of arg")} ] 
         `(defn ~fn-name [~a]
            (wrap ~post 
                  ~(clojure.walk/postwalk-replace wrapped-arg body)
-                 "Post condition p" "Post Condition n"))))
-    
-    
-    
-    
+                 "Post condition of function return" "Pre Condition of function return"))))
+       
+       
+       
+       
     (defcontract-x ff-save-x f 
       (make-contract gt0? gt0?)
       lenient
@@ -972,17 +976,54 @@ Using this macro we can simplify the definitions of =ff-use= and
       lenient
       (ff-saved n))
     
-    
-    
+       
+       
     (deftest ff-example-x ;\ref{line:test}
-       (ff-save-x (fn [not-used] 50))
-       (is (= 50 (ff-use-2 42)))
-       (is (thrown? java.lang.Exception (ff-use-x -1)))
-       (ff-save-x (fn [not-used] -1))
-       (is (thrown? java.lang.Exception (ff-use-x 42))))
+      (ff-save-x (fn [not-used] 50))
+      (is (= 50 (ff-use-2 42)))
+      (is (thrown? java.lang.Exception (ff-use-x -1)))
+      (ff-save-x (fn [not-used] -1))
+      (is (thrown? java.lang.Exception (ff-use-x 42))))
+       
     
-
-
+  
+  ;; Experimenting with Ralf's "why postwalk replace?"
+  
+  (defmacro simple-contract [fn-name arg contract post body]
+    (let [wrapped-arg# `(wrap ~contract ~arg "post cond of arg" "pre cond of arg")]
+      `(defn ~fn-name [wrapped-arg#]
+         ~body)))
+  
+  (simple-contract grc-save f
+                   (make-contract gt0? gt0?)
+                   lenient
+                   (dosync (ref-set ff-saved f)))
+  
+  ;;   <gfredericks> ah ha  [15:45]
+  ;; <gfredericks> ,`(fn [bar] (* bar 3))
+  ;; <clojurebot> (clojure.core/fn [sandbox/bar] (clojure.core/* sandbox/bar 3))
+  ;; <gfredericks> ,(let [bar (+ 7 2)] `(fn [bar] (* bar 3)))
+  ;; <clojurebot> (clojure.core/fn [sandbox/bar] (clojure.core/* sandbox/bar 3))
+  ;; <gfredericks> ,(let [bar (+ 7 2)] `(fn [~bar] (* ~bar 3)))  [15:46]
+  ;; <clojurebot> (clojure.core/fn [9] (clojure.core/* 9 3))
+  ;; <gfredericks> ^ note this still doesn't make sense since 9 is not a valid
+  ;;            function arg-name
+  ;; <gfredericks> ,(let [bar (+ 7 2)] `(fn [bar#] (* ~bar 3)))
+  ;; <clojurebot> (clojure.core/fn [bar__105__auto__] (clojure.core/* 9 3))
+  ;; <gfredericks> it's not clear what you're actually trying to do from your
+  ;;            example, so either of those tactics could be relevant
+  
+  
+  
+  
+  (defn wrapit [myfn arg contract]
+    (myfn (wrap contract arg "post" "pre")))
+  
+  (wrapit foo 0 gt0?)*source-path*
+  
+  
+  ;; so we create a function which takes our parameter, wraps iat and calls the original
+  (defmacro attach-contract [newname func arg contract ] `(defn ~newname [~arg] (~func (wrap ~contract ~arg "pre" "post")) ))
 #+end_src
 
 
@@ -1007,11 +1048,11 @@ underlying function implementation can be specified separately and
 combined at will. An example of this, for first order contracts, is
 given in \cite[p.\ 173 - 175]{joy}.  
 
-
+*** TODO this needs to be tangled
 #+latex: \begin{listing}[H]
 #+latex: \caption{Separating contract from implementation} \label{lst:joy}
 #+srcname: aop
-#+begin_src clojure :tangle yes :exports code
+#+begin_src clojure :tangle no :exports code
   (declare collect-bodies)
   
   (defmacro contract [name & forms]
@@ -1046,10 +1087,11 @@ associate them with a function.  For example a doubler-contract which
 requires a function to double the value of its argument can be
 associated with a function =times2= which does just that:
 
+** TODO tangle this too
 #+latex: \begin{listing}[H]
 #+latex: \caption{Composition of contract function and constrained function} \label{lst:joy2}
 #+srcname: aop
-#+begin_src clojure :tangle yes :exports code
+#+begin_src clojure :tangle no :exports code
   (def doubler-contract
     (contract doubler [x]
               (:require (pos? x))
@@ -1378,7 +1420,7 @@ This takes the two device specific functions as arguments.
        javax.sip.address"
       (and
        (string? s)
-       (substring "@" s)))
+       (substring? "@" s)))
     
     (import sun.net.util.IPAddressUtil)
     (defn ip-address? [s]
