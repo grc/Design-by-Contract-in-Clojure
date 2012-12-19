@@ -663,7 +663,7 @@ emitted with the culprit identified appropriately.
     (is (flat? :foo))
     (is (not (flat? (make-contract :foo :bar)))))
   (testing "Contract construction"
-    (is (= 2 (count (make-contract :foo :bar))))
+    (is (= 4 (count (make-contract :foo :bar))))
     (is ((dom (make-contract lenient lenient)) 42))))
 
 
@@ -1017,7 +1017,7 @@ We wish to produce a function which acts a facade to the original:
 calling it with its argument list replaced by arguments which have
 been protected by calls to the =wrap= function described above:
 
-#+BEGIN_SRC clojure
+#+BEGIN_SRC clojure :tangle yes :exports code
 (defn wrapit [myfn arg contract]
   (myfn (wrap contract arg "post" "pre")))
 #+END_SRC
@@ -1028,7 +1028,7 @@ plate coding.  This is where Lisp macros are useful.  The =wrapit=
 function above provides an example of the output we wish, so we use
 that to design our macro:
 
-#+BEGIN_SRC clojure
+#+BEGIN_SRC clojure :tangle yes :exports code
   (defmacro attach-contract [newname func arg contract ]
     "Return a facade function definition that calls `func' with `arg'
      wrapped in calls to `wrap'."
@@ -1044,23 +1044,48 @@ the idiomatic approach of using a fixed length list to hold the
 pair.  We also change the macro to extract the appropriate failure
 message from the contract itself and pass that on to =wrap=.
 
-#+BEGIN_SRC clojure
-  (defn wrap-arg/contract [arg/contract]
-    "Extracts the contract from the pair arg/contract and returns arg wrapped in that contract"
-    (let [arg (first arg/contract)
-          contract (second arg/contract)]
-      (wrap contract arg (:pre-message contract) (:post-message contract))))
+#+BEGIN_SRC clojure :tangle yes :exports code
+    (defn wrap-arg-contract [arg-contract]
+      "Extracts the contract from the pair arg-contract and returns arg wrapped in that contract"
+      (let [arg (first arg-contract)
+            contract (resolve (second arg-contract))]
+        (wrap contract arg (:pre-message contract) (:post-message contract))))
+    
   
-  (defmacro attach-contracts [newname func args/contracts]
-    "Create a new function definition `newname' which calls `func' with
-    the args stored in arg/contracts wrapped in the corresponding
-    contract."
-    (let [ wrapped-args (map 'wrap-arg/contract args/contracts)]
-      `(defn ~newname [wrapped-args]
-         (apply ~func wrapped-args ))))
+  (deftest wrap-test 
+    (is (= 4 (wrap-arg-contract '(4 gt0?)))))
+  
+    (defmacro attach-contracts [newname func args-contracts]
+      "Create a new function definition `newname' which calls `func' with
+      the args stored in arg/contracts wrapped in the corresponding
+      contract."
+      (let [args (vec (map first args-contracts))]
+        `(defn ~newname ~args
+           (let [wrapped-args# (map wrap-arg-contract ~args-contracts)]
+             (apply ~func wrapped-args# )))))
 #+END_SRC
 
+TODO: explain the call to resolve
 
+TODO: trailing # is a gensym, explain
+
+
+Considering the trivial case of a function which adds its two
+arguments, but requires them both to be positive:
+
+#+BEGIN_SRC clojure :tangle yes :exports code
+  (defn add-args [a b]
+    (+ a b))
+  
+  ;; (attach-contracts add-args-c
+  ;;                   add-args
+  ;;                   [(a gt0?) (b gt0?)])
+  
+  ;; (deftest add-args-test
+  ;;   (add-args-c 4 4)
+  ;;   (add-args-c 0 4))
+  
+#+END_SRC
 
 
 
