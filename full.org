@@ -728,11 +728,19 @@ The underlying contract implementation is hidden behind utility
 functions.  We need to select a data structure to represent the
 contracts.  As is idiomatic in Clojure development, the first data
 structure of choice is =map=.  Here we define two keys, =:dom= and
-=:rng= to hold the domain and range (pre and post conditions).
+=:rng= to hold the domain and range (pre and post conditions).  We
+provide two implementations of =make-contract=: =make-contract/2= is
+a simple shorthand version which calls =make-contract/4= with default
+values of the message to be used in the case of pre or post condition
+failure.
+
 
 #+begin_src clojure :tangle yes :exports code
-  (defn make-contract [pre post]
-    {:dom pre :rng post})
+  (defn make-contract 
+    ([pre post]
+       (make-contract pre post "Pre condition failed" "Post condition failed"))
+    ([pre post pre-message post-message]
+       {:dom pre :rng post :pre-message pre-message :post-message post-message}))
   
   (defn dom [contract]
     (:dom contract))
@@ -987,18 +995,6 @@ Using this macro we can simplify the definitions of =ff-use= and
        
     
   
-  ;; Experimenting with Ralf's "why postwalk replace?"
-  
-  (defmacro simple-contract [fn-name arg contract post body]
-    (let [wrapped-arg# `(wrap ~contract ~arg "post cond of arg" "pre cond of arg")]
-      `(defn ~fn-name [wrapped-arg#]
-         ~body)))
-  
-  (simple-contract grc-save f
-                   (make-contract gt0? gt0?)
-                   lenient
-                   (dosync (ref-set ff-saved f)))
-  
   ;;   <gfredericks> ah ha  [15:45]
   ;; <gfredericks> ,`(fn [bar] (* bar 3))
   ;; <clojurebot> (clojure.core/fn [sandbox/bar] (clojure.core/* sandbox/bar 3))
@@ -1007,24 +1003,65 @@ Using this macro we can simplify the definitions of =ff-use= and
   ;; <gfredericks> ,(let [bar (+ 7 2)] `(fn [~bar] (* ~bar 3)))  [15:46]
   ;; <clojurebot> (clojure.core/fn [9] (clojure.core/* 9 3))
   ;; <gfredericks> ^ note this still doesn't make sense since 9 is not a valid
-  ;;            function arg-name
+  ;;            function arg-name it
   ;; <gfredericks> ,(let [bar (+ 7 2)] `(fn [bar#] (* ~bar 3)))
   ;; <clojurebot> (clojure.core/fn [bar__105__auto__] (clojure.core/* 9 3))
   ;; <gfredericks> it's not clear what you're actually trying to do from your
   ;;            example, so either of those tactics could be relevant
+    
   
   
-  
-  
-  (defn wrapit [myfn arg contract]
-    (myfn (wrap contract arg "post" "pre")))
-  
-  (wrapit foo 0 gt0?)*source-path*
-  
-  
-  ;; so we create a function which takes our parameter, wraps iat and calls the original
-  (defmacro attach-contract [newname func arg contract ] `(defn ~newname [~arg] (~func (wrap ~contract ~arg "pre" "post")) ))
 #+end_src
+
+We wish to produce a function which acts a facade to the original:
+calling it with its argument list replaced by arguments which have
+been protected by calls to the =wrap= function described above:
+
+#+BEGIN_SRC clojure
+(defn wrapit [myfn arg contract]
+  (myfn (wrap contract arg "post" "pre")))
+#+END_SRC
+
+Whilst we could manually create these facades for all of our
+contracted functions, that would involve a lot of repetitive boiler
+plate coding.  This is where Lisp macros are useful.  The =wrapit=
+function above provides an example of the output we wish, so we use
+that to design our macro:
+
+#+BEGIN_SRC clojure
+  (defmacro attach-contract [newname func arg contract ]
+    "Return a facade function definition that calls `func' with `arg'
+     wrapped in calls to `wrap'."
+    `(defn ~newname [~arg]
+       (~func (wrap ~contract ~arg "pre" "post"))))
+#+END_SRC
+
+This produces the required function definition, but is limited to 
+functions of arity 1.  To allow us to handle functions of any arity
+we introduce =attach-contracts= which takes a vector of argument and
+contract pairs.   Clojure has no primitive pair data type so we adopt
+the idiomatic approach of using a fixed length list to hold the
+pair.  We also change the macro to extract the appropriate failure
+message from the contract itself and pass that on to =wrap=.
+
+#+BEGIN_SRC clojure
+  (defn wrap-arg/contract [arg/contract]
+    "Extracts the contract from the pair arg/contract and returns arg wrapped in that contract"
+    (let [arg (first arg/contract)
+          contract (second arg/contract)]
+      (wrap contract arg (:pre-message contract) (:post-message contract))))
+  
+  (defmacro attach-contracts [newname func args/contracts]
+    "Create a new function definition `newname' which calls `func' with
+    the args stored in arg/contracts wrapped in the corresponding
+    contract."
+    (let [ wrapped-args (map 'wrap-arg/contract args/contracts)]
+      `(defn ~newname [wrapped-args]
+         (apply ~func wrapped-args ))))
+#+END_SRC
+
+
+
 
 
 ** Separation of concerns
