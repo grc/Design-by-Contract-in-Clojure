@@ -1045,27 +1045,46 @@ pair.  We also change the macro to extract the appropriate failure
 message from the contract itself and pass that on to =wrap=.
 
 #+BEGIN_SRC clojure :tangle yes :exports code
-    (defn wrap-arg-contract [arg-contract]
-      "Extracts the contract from the pair arg-contract and returns arg wrapped in that contract"
-      (let [arg (first arg-contract)
-            contract (resolve (second arg-contract))]
-        (wrap contract arg (:pre-message contract) (:post-message contract))))
+  (defn wrap-arg-contract [arg-contract]
+    "Extracts the contract from the pair arg-contract and returns arg wrapped in that contract"
+    (let [arg (first arg-contract)
+          contract (second arg-contract)]
+      (wrap contract arg (:post-message contract) (:pre-message contract) )))
+      
     
-  
   (deftest wrap-test 
-    (is (= 4 (wrap-arg-contract '(4 gt0?)))))
+    (is (= 4
+           (wrap-arg-contract (list 4 gt0?))))
+    (is (thrown-with-msg? java.lang.Exception #"Contract failed"
+          (wrap-arg-contract (list 0 gt0?)))))
+    
+  (defmacro attach-contracts [newname func args-contracts]
+    "Create a new function definition `newname' which calls `func' with
+     the args stored in arg/contracts wrapped in the corresponding
+     contract."
+    (let [args (vec (map first args-contracts))]
+      `(defn ~newname ~args
+         (let [wrapped-args# (map wrap-arg-contract ~args-contracts)]
+           (apply ~func wrapped-args# )))))
   
-    (defmacro attach-contracts [newname func args-contracts]
-      "Create a new function definition `newname' which calls `func' with
-      the args stored in arg/contracts wrapped in the corresponding
-      contract."
-      (let [args (vec (map first args-contracts))]
-        `(defn ~newname ~args
-           (let [wrapped-args# (map wrap-arg-contract ~args-contracts)]
-             (apply ~func wrapped-args# )))))
+  (def faulty-sqrt-2
+    (wrap-arg-contract (list (fn [not-used] -1) (make-contract gt0? gt0?))))
+  
+  (deftest faulty-sqrt-2-test
+    (is (thrown-with-msg? java.lang.Exception #"Post condition" (faulty-sqrt-2 1)))
+    (is (thrown-with-msg? java.lang.Exception #"Pre condition" (faulty-sqrt-2 0))))
+  
+  
 #+END_SRC
 
-TODO: explain the call to resolve
+
+The call to =resolve= in =wrap-arg-contract= deserves some
+explanation.  As described earlier \ref{clojure-section}, symbols are
+resolved at compile time to locate the relevant =var= --- the
+function which will be invoked.  In our =wrap-arg-contract= function
+we only receive the symbol representing the desired function at run
+time.  =resolve= provides a run time means of accessing the required
+=var=, allowing us to invoke the  contract predicate.
 
 TODO: trailing # is a gensym, explain
 
