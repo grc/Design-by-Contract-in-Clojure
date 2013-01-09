@@ -630,62 +630,70 @@ emitted with the culprit identified appropriately.
 
 #+srcname: preamble
 #+begin_src clojure :tangle yes :exports none 
-(ns dbc.core
-  (:use clojure.test clojure.walk clojure.contrib.condition [clojure.contrib.string :only (substring?)]))
-;; Commentary
-;; This file is generated from the literate programming sources in
-;;  impl.org, use that as the master.
-
-;;
-;; All contracts pertain to the arguments to this function so if the
-;; argument is a high order function, then the contract states: "takes
-;; a function which returns positive numbers" or some such.
-
-;; So how do we describe that contract?
-
-;; "takes a positive number": (pos ?)
-;; "takes a function which returns a positive number": ?
-
-
-
-(declare make-contract dom rng flat?)
-
-(defn lenient [_]
-  true)
-
-(defn strict [_]
-  false)
-
-
-
-(deftest contract-construction
-  (testing "Flat predicate"
-    (is (flat? :foo))
-    (is (not (flat? (make-contract :foo :bar)))))
-  (testing "Contract construction"
-    (is (= 4 (count (make-contract :foo :bar))))
-    (is ((dom (make-contract lenient lenient)) 42))))
-
-
-
-
-
-(defn pred [contract value]
-  "CONTRACT must be a function which accepts a single value to check."
-  (contract value))
-
-  (declare fo-wrap ho-wrap)
-
-; TODO look at using clojure-contrib.condition/raise here
-(defn    contract-error [position]
-  (throw (Exception. (str "Contract failed: " position))))
-
-
+  (ns dbc.core
+    (:use clojure.test clojure.walk clojure.contrib.condition [clojure.contrib.string :only (substring?)]))
+  ;; Commentary
+  ;; This file is generated from the literate programming sources in
+  ;;  impl.org, use that as the master.
+  
+  ;;
+  ;; All contracts pertain to the arguments to this function so if the
+  ;; argument is a high order function, then the contract states: "takes
+  ;; a function which returns positive numbers" or some such.
+  
+  ;; So how do we describe that contract?
+  
+  ;; "takes a positive number": (pos ?)
+  ;; "takes a function which returns a positive number": ?
+  
+  
+  
+  (declare make-contract dom rng flat?)
+  
+  (defn lenient [_]
+    true)
+  
+  (defn strict [_]
+    false)
+  
+  
+  
+  (deftest contract-construction
+    (testing "Flat predicate"
+      (is (flat? :foo))
+      (is (not (flat? (make-contract :foo :bar)))))
+    (testing "Contract construction"
+      (is (= 4 (count (make-contract :foo :bar))))
+      (is ((dom (make-contract lenient lenient)) 42))))
+  
+  
+  
+  
+  
+  ;; (defn pred [contract value]
+  ;;   "CONTRACT must be a function which accepts a single value to check."
+  ;;   (contract value))
+  
+  (defn pred [contract value]
+    "CONTRACT must be a function which accepts a single value to check."
+    ( (if (symbol? contract)
+        (resolve contract)
+        contract) value))
+  
+    (declare fo-wrap ho-wrap)
+  
+  ; TODO look at using clojure-contrib.condition/raise here
+  (defn    contract-error [position]
+    (throw (Exception. (str "Contract failed: " position))))
+  
+  
 #+end_src
 
 #     Mutual recursion, as in ho-warp and wrap, probably ought to
 #     use trampolining:
 #     http://groups.google.com/group/clojure/msg/3addf875319c5c10
+
+TODO need two versions of =pred=, second of which introduces =resolve=
 
 #+latex: \begin{listing}[H]
 #+LATEX: \caption{Clojure implementation of \texttt{wrap}}\label{lst:wrap}
@@ -1058,6 +1066,13 @@ message from the contract itself and pass that on to =wrap=.
     (is (thrown-with-msg? java.lang.Exception #"Contract failed"
           (wrap-arg-contract (list 0 gt0?)))))
     
+
+(defn zip [a b]
+  "Returns a lazy sequence consisting of pairs made of the first
+elements of a and b, second etc."
+  (map list a b))
+
+
   (defmacro attach-contracts [newname func args-contracts]
     "Create a new function definition `newname' which calls `func' with
      the args stored in arg/contracts wrapped in the corresponding
@@ -1066,7 +1081,22 @@ message from the contract itself and pass that on to =wrap=.
       `(defn ~newname ~args
          (let [wrapped-args# (map wrap-arg-contract ~args-contracts)]
            (apply ~func wrapped-args# )))))
+
+(defmacro attach-contracts-2 [newname func contracts]
+  "Create a new function definition `newname' which calls `func' with
+   the args stored in arg/contracts wrapped in the corresponding
+   contract."
+  (let [args (vec (map gensym contracts))]
+    `(defn ~newname ~args
+       (print (format "wrapped function called with %s\n" ~args))
+       (let [wrapped-args# (map wrap-arg-contract (zip ~args ~contracts))]
+         (print (format "Applying %s\n" ~func))
+         (apply ~func wrapped-args# )))))
   
+
+
+
+
   (def faulty-sqrt-2
     (wrap-arg-contract (list (fn [not-used] -1) (make-contract gt0? gt0?))))
   
@@ -1078,31 +1108,24 @@ message from the contract itself and pass that on to =wrap=.
 #+END_SRC
 
 
-The call to =resolve= in =wrap-arg-contract= deserves some
-explanation.  As described earlier \ref{clojure-section}, symbols are
-resolved at compile time to locate the relevant =var= --- the
-function which will be invoked.  In our =wrap-arg-contract= function
-we only receive the symbol representing the desired function at run
-time.  =resolve= provides a run time means of accessing the required
-=var=, allowing us to invoke the  contract predicate.
-
-TODO: trailing # is a gensym, explain
+TODO expand on anaphoric diffiulties encountered with ~'foo
 
 
 Considering the trivial case of a function which adds its two
 arguments, but requires them both to be positive:
 
+
 #+BEGIN_SRC clojure :tangle yes :exports code
   (defn add-args [a b]
     (+ a b))
   
-  ;; (attach-contracts add-args-c
-  ;;                   add-args
-  ;;                   [(a gt0?) (b gt0?)])
+  (attach-contracts-2 add-args-c
+                    add-args
+                    [lenient lenient])
   
-  ;; (deftest add-args-test
-  ;;   (add-args-c 4 4)
-  ;;   (add-args-c 0 4))
+  (deftest add-args-test
+    (is (= 8  (add-args-c 4 4)))
+    (is (thrown-with-msg? java.lang.Exception #"Pre condition") (add-args-c 0 4)))
   
 #+END_SRC
 
