@@ -1,5 +1,3 @@
-
-
 #+title:     Design by Contract in Clojure
 #+AUTHOR:    Giles Chamberlin
 #+OPTIONS:   H:3 num:t toc:t \n:nil @:t ::t |:t ^:nil -:t f:t *:t <:t
@@ -1121,11 +1119,11 @@ arguments, but requires them both to be positive:
   
   (attach-contracts-2 add-args-c
                     add-args
-                    [lenient lenient])
+                    [gt0? gt0?])
   
   (deftest add-args-test
     (is (= 8  (add-args-c 4 4)))
-    (is (thrown-with-msg? java.lang.Exception #"Pre condition") (add-args-c 0 4)))
+    (is (thrown-with-msg? java.lang.Exception #"Contract failed" (add-args-c 0 4))))
   
 #+END_SRC
 
@@ -1620,6 +1618,13 @@ wrapped version should achieve our goal.
 
 
 
+** Meta programming
+
+TODO discuss 
+
+- problems with initial monolithic wrap implementation
+
+- symbols, anaphora intoduced by =~'foo= 
 
 ** The current state of Design by Contract 
 
