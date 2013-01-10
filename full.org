@@ -47,6 +47,11 @@
 What hath I wrought?
 \end{abstract}
 
+The author confirms that this dissertation does not contain material
+previously submitted for another degree or academic award; and that the
+work presented here is the author's own, except where otherwise
+stated.
+
 \pagebreak
 [TABLE-OF-CONTENTS]
 
@@ -372,14 +377,14 @@ Maps, similar to Python's dictionaries, are a sequence of key value
 pairs.  
 
 #+begin_src clojure
-  (def map-example {"one" 1 "two" 2})
+(def map-example {"one" 1 "two" 2})
 #+end_src
 
 As a map is also a valid function, map lookup may be performed using
 the key:
 
 #+begin_src clojure
-  (map-example "one")
+(map-example "one")
  > 1
 #+end_src
 
@@ -389,9 +394,9 @@ arguments to a function.  Denoted by =[...]=, they too are a valid
 function:
 
 #+begin_src clojure
-  (def vector-example [10 20 30 40])
-  (vector-example  2)
-  > 30
+(def vector-example [10 20 30 40])
+(vector-example  2)
+> 30
 #+end_src
 
 ** Macros
@@ -411,6 +416,39 @@ from the parsed text.  A better comparison would be that Lisp macros
 provide a more powerful, and readable, version of C++ template meta
 programming.
 
+
+TODO This was just dropped in
+
+Lisp's macros should not be considered in the same vein as the C
+family =#define=.  Whilst C's macros use a simple pre processor to
+perform textual substitution, Lisp macros have access to the entire
+Lisp language to perform manipulations.  Macro are run and generate
+code at macro expansion time.  That code and any other regular code is
+then executed at run time.  
+
+At their simplest macros make use of the backquote special form.  In a
+similar manner to the =quote= special form, the body of a backquote
+expression is emitted verbatim.  Unlike the =quote= syntax, individual
+elements of the body can be executed by preceding with a =~=.  The
+following macro emits code to sum the macro arguments:
+
+#+begin_src clojure
+(defmacro pointless-summation [a b]
+  `(+ ~a ~b))
+
+(pointless-summation 3 4)
+#+end_src
+
+The generated code can be examined using =macroexpand= which reveals
+that the above expands to:
+
+#+begin_src clojure
+(clojure.core/+ 3 4)
+#+end_src
+
+This is the code which will be executed at run time. A full
+explanation of macros is beyond the scope of this dissertation,
+\cite{Seibel} is recommended as a starting point.
 
 
 The Lisp macro system in turn allows much of Lisp to be written in
@@ -434,11 +472,11 @@ A typical use of =defn= would be:
 
 #+srcname:unchecked-java-sqrt
 #+begin_src clojure  
-  (defn unchecked-java-sqrt
-    "Return the square root of n, calling the underlying 
-     Java implementation"
-    [n]
-    (Math/sqrt n))
+(defn unchecked-java-sqrt
+  "Return the square root of n, calling the underlying 
+   Java implementation"
+  [n]
+  (Math/sqrt n))
 #+end_src
 
 The use of macros to build layers of functionality on top of the core
@@ -472,11 +510,11 @@ version of =java-sqrt=
 
 #+srcname: checked-java-sqrt
 #+begin_src clojure
-  (defn checked-java-sqrt 
-    "Pre Condition checks prior to calling underlying function"
-    [n]
-    {:pre [(number? n) (>= n 0)]}
-    (Math/sqrt n))
+(defn checked-java-sqrt 
+  "Pre Condition checks prior to calling underlying function"
+  [n]
+  {:pre [(number? n) (>= n 0)]}
+  (Math/sqrt n))
 #+end_src
 
 
@@ -487,8 +525,8 @@ manner:
 
 #+begin_src clojure 
 (try (print (checked-java-sqrt -1))
-       (catch AssertionError e
-         (.getMessage e)))
+     (catch AssertionError e
+       (.getMessage e)))
 #+end_src
 
 
@@ -513,11 +551,11 @@ Will result in:
 The usual way of introducing a function into a Clojure environment,
 =defn= is a macro which can accept pre and post conditions..
 #+begin_src clojure :exports none
- (macroexpand '(defn checked-java-sqrt 
-    "Pre Condition checks prior to calling underlying function"
-    [n]
-    {:pre [(number? n) (>= n 0)]}
-    (Math/sqrt n))) 
+(macroexpand '(defn checked-java-sqrt 
+                "Pre Condition checks prior to calling underlying function"
+                [n]
+                {:pre [(number? n) (>= n 0)]}
+                (Math/sqrt n))) 
 #+end_src
 
 Macro expansion, prior to compilation, wraps the body of the =defn= in
@@ -530,7 +568,7 @@ Omitting meta data, macro expansion of =checked-java-sqrt= yields:
      ([n]
 	(clojure.core/assert (number? n))
 	(clojure.core/assert (>= n 0))
-	(Math/sqrt n))
+	(Math/sqrt n)))
 #+end_src
 The demotion of the conditions to generalised assertions loses the
 ability to extract the conditions for use in Eiffel style short form
@@ -628,63 +666,63 @@ emitted with the culprit identified appropriately.
 
 #+srcname: preamble
 #+begin_src clojure :tangle yes :exports none 
-  (ns dbc.core
-    (:use clojure.test clojure.walk clojure.contrib.condition [clojure.contrib.string :only (substring?)]))
-  ;; Commentary
-  ;; This file is generated from the literate programming sources in
-  ;;  impl.org, use that as the master.
-  
-  ;;
-  ;; All contracts pertain to the arguments to this function so if the
-  ;; argument is a high order function, then the contract states: "takes
-  ;; a function which returns positive numbers" or some such.
-  
-  ;; So how do we describe that contract?
-  
-  ;; "takes a positive number": (pos ?)
-  ;; "takes a function which returns a positive number": ?
-  
-  
-  
-  (declare make-contract dom rng flat?)
-  
-  (defn lenient [_]
-    true)
-  
-  (defn strict [_]
-    false)
-  
-  
-  
-  (deftest contract-construction
-    (testing "Flat predicate"
-      (is (flat? :foo))
-      (is (not (flat? (make-contract :foo :bar)))))
-    (testing "Contract construction"
-      (is (= 4 (count (make-contract :foo :bar))))
-      (is ((dom (make-contract lenient lenient)) 42))))
-  
-  
-  
-  
-  
-  ;; (defn pred [contract value]
-  ;;   "CONTRACT must be a function which accepts a single value to check."
-  ;;   (contract value))
-  
-  (defn pred [contract value]
-    "CONTRACT must be a function which accepts a single value to check."
-    ( (if (symbol? contract)
-        (resolve contract)
-        contract) value))
-  
-    (declare fo-wrap ho-wrap)
-  
-  ; TODO look at using clojure-contrib.condition/raise here
-  (defn    contract-error [position]
-    (throw (Exception. (str "Contract failed: " position))))
-  
-  
+(ns dbc.core
+  (:use clojure.test clojure.walk clojure.contrib.condition [clojure.contrib.string :only (substring?)]))
+;; Commentary
+;; This file is generated from the literate programming sources in
+;;  impl.org, use that as the master.
+
+;;
+;; All contracts pertain to the arguments to this function so if the
+;; argument is a high order function, then the contract states: "takes
+;; a function which returns positive numbers" or some such.
+
+;; So how do we describe that contract?
+
+;; "takes a positive number": (pos ?)
+;; "takes a function which returns a positive number": ?
+
+
+
+(declare make-contract dom rng flat?)
+
+(defn lenient [_]
+  true)
+
+(defn strict [_]
+  false)
+
+
+
+(deftest contract-construction
+  (testing "Flat predicate"
+    (is (flat? :foo))
+    (is (not (flat? (make-contract :foo :bar)))))
+  (testing "Contract construction"
+    (is (= 4 (count (make-contract :foo :bar))))
+    (is ((dom (make-contract lenient lenient)) 42))))
+
+
+
+
+
+;; (defn pred [contract value]
+;;   "CONTRACT must be a function which accepts a single value to check."
+;;   (contract value))
+
+(defn pred [contract value]
+  "CONTRACT must be a function which accepts a single value to check."
+  ( (if (symbol? contract)
+      (resolve contract)
+      contract) value))
+
+(declare fo-wrap ho-wrap)
+
+                                        ; TODO look at using clojure-contrib.condition/raise here
+(defn    contract-error [position]
+  (throw (Exception. (str "Contract failed: " position))))
+
+
 #+end_src
 
 #     Mutual recursion, as in ho-warp and wrap, probably ought to
@@ -698,23 +736,23 @@ TODO need two versions of =pred=, second of which introduces =resolve=
 #+srcname: wrap1
 
 #+begin_src clojure :tangle yes :exports code
-  (defn wrap [contract value p n]
-    (if (flat? contract)
-      (fo-wrap contract value p n)
-      (ho-wrap contract value p n)))
-  
-  (defn fo-wrap  [contract value p n]
-    (if (pred contract value)
-      value
-      (contract-error p)))
-  
-  (defn ho-wrap [ct x p n]
-    (let [d (dom ct)
-          r (rng ct)]
-      (fn [y] (wrap r
-                    (x (wrap d y n p))
-                    p
-                    n))))
+(defn wrap [contract value p n]
+  (if (flat? contract)
+    (fo-wrap contract value p n)
+    (ho-wrap contract value p n)))
+
+(defn fo-wrap  [contract value p n]
+  (if (pred contract value)
+    value
+    (contract-error p)))
+
+(defn ho-wrap [ct x p n]
+  (let [d (dom ct)
+        r (rng ct)]
+    (fn [y] (wrap r
+                  (x (wrap d y n p))
+                  p
+                  n))))
 #+end_src
 #+latex: \end{listing}
 
@@ -742,20 +780,20 @@ failure.
 
 
 #+begin_src clojure :tangle yes :exports code
-  (defn make-contract 
-    ([pre post]
-       (make-contract pre post "Pre condition failed" "Post condition failed"))
-    ([pre post pre-message post-message]
-       {:dom pre :rng post :pre-message pre-message :post-message post-message}))
-  
-  (defn dom [contract]
-    (:dom contract))
-  
-  (defn rng [contract]
-    (:rng contract))
-  
-  (defn flat? [x]
-    (not (map? x)))
+(defn make-contract 
+  ([pre post]
+     (make-contract pre post "Pre condition failed" "Post condition failed"))
+  ([pre post pre-message post-message]
+     {:dom pre :rng post :pre-message pre-message :post-message post-message}))
+
+(defn dom [contract]
+  (:dom contract))
+
+(defn rng [contract]
+  (:rng contract))
+
+(defn flat? [x]
+  (not (map? x)))
 #+end_src
 
 To examine how this works we look first at an Eiffel style first order
@@ -768,19 +806,19 @@ positive.
 #+latex: \caption{First order require/ensure implementation} \label{lst:fo}
 #+srcname: lst:fo
 #+begin_src clojure :tangle yes :exports code
-  (defn gt0? [x]
-    (and
-     (number? x)
-     (pos? x)))
-  
-  (def faulty-sqrt
-    (wrap (make-contract gt0? gt0?)
-          (fn [not-used] -1)
-          "Post condition violated" "Pre condition violated"))
-  
-  (deftest faulty-sqrt-test
-    (is (thrown-with-msg? java.lang.Exception #"Post condition" (faulty-sqrt 1)))
-    (is (thrown-with-msg? java.lang.Exception #"Pre condition" (faulty-sqrt 0))))
+(defn gt0? [x]
+  (and
+   (number? x)
+   (pos? x)))
+
+(def faulty-sqrt
+  (wrap (make-contract gt0? gt0?)
+        (fn [not-used] -1)
+        "Post condition violated" "Pre condition violated"))
+
+(deftest faulty-sqrt-test
+  (is (thrown-with-msg? java.lang.Exception #"Post condition" (faulty-sqrt 1)))
+  (is (thrown-with-msg? java.lang.Exception #"Pre condition" (faulty-sqrt 0))))
 #+end_src
 #+latex: \end{listing}
 
@@ -820,26 +858,26 @@ only accept functions which take and return  numbers greater than 0.
 #+latex: \caption{Application of \texttt{wrap}} \label{lst:ff-use}
 #+srcname: ff-use
 #+begin_src clojure :tangle yes :exports code
-  (def ff-saved (ref (fn [not-used] 50)))
-  
- 
-  
+(def ff-saved (ref (fn [not-used] 50)))
+
+
+
   ;;; (bigger-than-0 -> bigger-than-0) -> any
-  (defn ff-save [f] (dosync (ref-set
-                          ff-saved
-                          (wrap (make-contract gt0? gt0?) f "p" "n")) ))
-  
-  
+(defn ff-save [f] (dosync (ref-set
+                           ff-saved
+                           (wrap (make-contract gt0? gt0?) f "p" "n")) ))
+
+
   ;;; bigger-than-0 -> bigger-than-0
-  (defn ff-use [n] (ff-saved (wrap gt0? n "p" "n")))
-  
-  
-  (deftest ff-example ;\ref{line:test}
-    (ff-save (fn [not-used] 50))
-    (is (= 50 (ff-use 42)))
-    (is (thrown? java.lang.Exception (ff-use -1)))
-    (ff-save (fn [not-used] -1))
-    (is (thrown? java.lang.Exception (ff-use 42))))
+(defn ff-use [n] (ff-saved (wrap gt0? n "p" "n")))
+
+
+(deftest ff-example ;\ref{line:test}
+  (ff-save (fn [not-used] 50))
+  (is (= 50 (ff-use 42)))
+  (is (thrown? java.lang.Exception (ff-use -1)))
+  (ff-save (fn [not-used] -1))
+  (is (thrown? java.lang.Exception (ff-use 42))))
 #+end_src
 #+latex: \end{listing}
 
@@ -863,48 +901,26 @@ framework implementation but are omitted from this document.
 
 
 ** Code generation
+\label{codegen}
 Although logically correct, manually wrapping each occurrence of a
 parameter in calls to =wrap= is tedious and error prone; the sort of
 thing computers were intended to relieve us from.  Clojure, like other
 Lisps, has a sophisticated macro system which can be used to
-automatically generate this code.
-
-Lisp's macros should not be considered in the same vein as the C
-family =#define=.  Whilst C's macros use a simple pre processor to
-perform textual substitution, Lisp macros have access to the entire
-Lisp language to perform manipulations.  Macro are run and generate
-code at macro expansion time.  That code and any other regular code is
-then executed at run time.  
-
-At their simplest macros make use of the backquote special form.  In a
-similar manner to the =quote= special form, the body of a backquote
-expression is emitted verbatim.  Unlike the =quote= syntax, individual
-elements of the body can be executed by preceding with a =~=.  The
-following macro emits code to sum the macro arguments:
-
-#+begin_src clojure
-(defmacro pointless-summation [a b]
- `(+ ~a ~b))
-
-(pointless-summation 3 4)
-#+end_src
-
-The generated code can be examined using =macroexpand= which reveals
-that the above expands to:
-
-#+begin_src clojure
-(clojure.core/+ 3 4)
-#+end_src
-
-This is the code which will be executed at run time. A full
-explanation of macros is beyond the scope of this dissertation,
-\cite{Seibel} is recommended as a starting point.
-
-We will initially consider functions taking a single argument.
-Extension to multiple argument functions will be achieved through use
-of Clojure's somewhat limited support for currying.
+automatically generate this code.  We will be using this macro system
+to allow us attach contracts to functions, automatically wrapping the
+arguments.  We first look at a monolithic approach to the problem
+where we define a new macro, =defcontract= which requires access to
+the body of the function we are applying contracts to.  We then
+examine a second, superior, version where existing functions may have
+contracts attached to them, without requiring access to the function body.
 
 
+*** Monolithic approach
+
+Inspired by an intent to emulate the function definition macro =defn=,
+with support for contracts on higher order functions, we construct a
+macro =defcontract=.  For simplicity we only consider functions taking
+a single argument.
 
 #+latex: \begin{listing}[H]
 #+latex: \caption{An initial contract macro} \label{defcontract1}
@@ -916,9 +932,9 @@ of Clojure's somewhat limited support for currying.
        ~(clojure.walk/postwalk-replace wrapped-arg body))))
 
 
-  (defcontract-1 ff-save-2 f (make-contract gt0? gt0?)
-    (dosync (ref-set ff-saved f)))
-  
+(defcontract-1 ff-save-2 f (make-contract gt0? gt0?)
+  (dosync (ref-set ff-saved f)))
+
 #+end_src
 #+latex: \end{listing}
 
@@ -945,7 +961,7 @@ we could use the =wrap= function developed above.  The use of =:post=
 checks would limit us to simple flat asserts about the return value,
 whereas we would like to still have the ability to check high order
 function returns.  Accordingly we will use =wrap= to verify return
-values from functions defined using =defcontract-*=
+values from functions defined using =defcontract-2=
 
 
 Using this macro we can simplify the definitions of =ff-use= and
@@ -962,66 +978,76 @@ Using this macro we can simplify the definitions of =ff-use= and
 #+end_src
 #+latex: \end{listing}
 #+begin_src clojure :tangle yes :exports none
-    
-    (deftest ff-example-2 ;\ref{line:test}
-       (ff-save-2 (fn [not-used] 50))
-       (is (= 50 (ff-use-2 42)))
-       (is (thrown? java.lang.Exception (ff-use-2 -1)))
-       (ff-save-2 (fn [not-used] -1))
-       (is (thrown? java.lang.Exception (ff-use-2 42))))
-    
-    (defmacro defcontract-x [fn-name a c post body]
-      (let [wrapped-arg {a `(wrap ~c ~a  "post condition of arg" " pre condition of arg")} ] 
-        `(defn ~fn-name [~a]
-           (wrap ~post 
-                 ~(clojure.walk/postwalk-replace wrapped-arg body)
-                 "Post condition of function return" "Pre Condition of function return"))))
-       
-       
-       
-       
-    (defcontract-x ff-save-x f 
-      (make-contract gt0? gt0?)
-      lenient
-      (dosync (ref-set ff-saved f)))
-    
-    (defcontract-x ff-use-x n
-      gt0?
-      lenient
-      (ff-saved n))
-    
-       
-       
-    (deftest ff-example-x ;\ref{line:test}
-      (ff-save-x (fn [not-used] 50))
-      (is (= 50 (ff-use-2 42)))
-      (is (thrown? java.lang.Exception (ff-use-x -1)))
-      (ff-save-x (fn [not-used] -1))
-      (is (thrown? java.lang.Exception (ff-use-x 42))))
-       
-    
-  
-  ;;   <gfredericks> ah ha  [15:45]
-  ;; <gfredericks> ,`(fn [bar] (* bar 3))
-  ;; <clojurebot> (clojure.core/fn [sandbox/bar] (clojure.core/* sandbox/bar 3))
-  ;; <gfredericks> ,(let [bar (+ 7 2)] `(fn [bar] (* bar 3)))
-  ;; <clojurebot> (clojure.core/fn [sandbox/bar] (clojure.core/* sandbox/bar 3))
-  ;; <gfredericks> ,(let [bar (+ 7 2)] `(fn [~bar] (* ~bar 3)))  [15:46]
-  ;; <clojurebot> (clojure.core/fn [9] (clojure.core/* 9 3))
-  ;; <gfredericks> ^ note this still doesn't make sense since 9 is not a valid
-  ;;            function arg-name it
-  ;; <gfredericks> ,(let [bar (+ 7 2)] `(fn [bar#] (* ~bar 3)))
-  ;; <clojurebot> (clojure.core/fn [bar__105__auto__] (clojure.core/* 9 3))
-  ;; <gfredericks> it's not clear what you're actually trying to do from your
-  ;;            example, so either of those tactics could be relevant
-    
-  
-  
+
+(deftest ff-example-2 ;\ref{line:test}
+  (ff-save-2 (fn [not-used] 50))
+  (is (= 50 (ff-use-2 42)))
+  (is (thrown? java.lang.Exception (ff-use-2 -1)))
+  (ff-save-2 (fn [not-used] -1))
+  (is (thrown? java.lang.Exception (ff-use-2 42))))
+
+(defmacro defcontract-2 [fn-name a c post body]
+  (let [wrapped-arg {a `(wrap ~c ~a  "post condition of arg" " pre condition of arg")} ] 
+    `(defn ~fn-name [~a]
+       (wrap ~post 
+             ~(clojure.walk/postwalk-replace wrapped-arg body)
+             "Post condition of function return" "Pre Condition of function return"))))
+
+
+
+
+(defcontract-2 ff-save-x f 
+  (make-contract gt0? gt0?)
+  lenient
+  (dosync (ref-set ff-saved f)))
+
+(defcontract-2 ff-use-x n
+  gt0?
+  lenient
+  (ff-saved n))
+
+
+
+(deftest ff-example-x ;\ref{line:test}
+  (ff-save-x (fn [not-used] 50))
+  (is (= 50 (ff-use-2 42)))
+  (is (thrown? java.lang.Exception (ff-use-x -1)))
+  (ff-save-x (fn [not-used] -1))
+  (is (thrown? java.lang.Exception (ff-use-x 42))))
+
+
+
+
+
 #+end_src
 
-We wish to produce a function which acts a facade to the original:
-calling it with its argument list replaced by arguments which have
-been protected by calls to the =wrap= function described above:
+The macro defined in Figure \ref{defcontract1} successfully automates
+the process of wrapping function parameters in contract checking
+code. Unfortunately the resulting code is monolithic; conflating
+function implementation and contract.  This dramatically reduces
+modularity - one of the key advantages of functional programming
+according to \cite{hughes}. When used for functions like the =sqrt=
+example this is not too disastrous: the contract is a consequence of
+the underlying mathematics of the implementation.  But if we need
+similar contracts for other functions reuse will be limited.  In some
+cases contracts will be used to impose business rules on a function,
+rather than implementation artefacts.  In those cases we may wish to
+reuse the function implementation with a different contract in an
+alternative environment.
+
+Ideally a contract should just be an aspect of the function, along
+with its implementation.  Aspect Oriented Programming has been used
+\cite{aopdbc} to implement Design by Contract in AspectJ.  We're
+seeking to develop a similar approach where the contract and
+underlying function implementation can be specified separately and
+combined at will. An example of this, for first order contracts, is
+given in \cite[p.\ 173 - 175]{joy}.  
+
+
+We therefore consider an alternative approach where we
+produce a function which acts a facade to the original: calling it
+with its argument list replaced by arguments which have been protected
+by calls to the =wrap= function described above:
 
 #+BEGIN_SRC clojure :tangle yes :exports code
 (defn wrapit [myfn arg contract]
@@ -1032,152 +1058,183 @@ Whilst we could manually create these facades for all of our
 contracted functions, that would involve a lot of repetitive boiler
 plate coding.  This is where Lisp macros are useful.  The =wrapit=
 function above provides an example of the output we wish, so we use
-that to design our macro:
+that to design our macro.
 
+We forward declare a pair of functions: =wrap-arg-contract= will
+apply wrap to an argument and contract extracted from a list;
+Clojure's de facto pair representation; =zip= will produce a list of
+such pairs from two separate lists.  Implementation of these two will
+follow once we have examined the main =attach-contracts= macro.  Once
+the code is fully presented we will look at the macro expansion from
+a simple use and compare the generated code to that of =wrapit= above.
+
+#+latex: \begin{listing}[H]
+#+latex: \caption{A modular approach to applying contracts}\label{attach-contracts} 
 #+BEGIN_SRC clojure :tangle yes :exports code
-  (defmacro attach-contract [newname func arg contract ]
-    "Return a facade function definition that calls `func' with `arg'
-     wrapped in calls to `wrap'."
-    `(defn ~newname [~arg]
-       (~func (wrap ~contract ~arg "pre" "post"))))
+(declare wrap-arg-contract zip)
+
+(defmacro attach-contracts [newname func contracts]
+  "Create a new function definition `newname' which calls
+  `func' with the args stored in arg/contracts wrapped in
+   the corresponding contract."
+  (let [args (vec (map gensym contracts))]
+    `(defn ~newname ~args
+       (let [wrapped-args# 
+             (map wrap-arg-contract (zip ~args ~contracts))]
+         (apply ~func wrapped-args# )))))
+
+
 #+END_SRC
+#+latex: \end{listing}
 
-This produces the required function definition, but is limited to 
-functions of arity 1.  To allow us to handle functions of any arity
-we introduce =attach-contracts= which takes a vector of argument and
-contract pairs.   Clojure has no primitive pair data type so we adopt
-the idiomatic approach of using a fixed length list to hold the
-pair.  We also change the macro to extract the appropriate failure
-message from the contract itself and pass that on to =wrap=.
+As before, this emits a function definition.  The difference to that
+in the =defcontract= macro is that in the last line the call to
+=apply= invokes a function call with wrapped arguments.  The =let=
+line of the implementation constructs a vector to be used as the
+argument list in the the newly defined function.  There will be as
+many arguments as there were contracts passed in to the call to
+=attach-contracts=.  In order to build this vector we map =gensym=
+over the =contracts= vector.  Invoking =gensym= will return a new
+symbol with a unique name so =args= will be a vector of such symbols;
+ideal for use as an argument list.  In the =defn= line, =~newname= is
+replaced by the =newname= parameter passed in to the macro and
+=~args= by our newly created vector of symbols.
 
+
+#+latex: \begin{listing}[H]
+#+latex: \caption{Supporting functions for attach-contracts}
 #+BEGIN_SRC clojure :tangle yes :exports code
-  (defn wrap-arg-contract [arg-contract]
-    "Extracts the contract from the pair arg-contract and returns arg wrapped in that contract"
-    (let [arg (first arg-contract)
-          contract (second arg-contract)]
-      (wrap contract arg (:post-message contract) (:pre-message contract) )))
-      
-    
-  (deftest wrap-test 
-    (is (= 4
-           (wrap-arg-contract (list 4 gt0?))))
-    (is (thrown-with-msg? java.lang.Exception #"Contract failed"
-          (wrap-arg-contract (list 0 gt0?)))))
-    
+(defn wrap-arg-contract [arg-contract]
+  "Extracts the contract from the pair arg-contract and returns
+   arg wrapped in that contract"
+  (let [arg (first arg-contract)
+        contract (second arg-contract)]
+    (wrap contract arg
+          (:post-message contract)
+          (:pre-message contract))))
+
+
+(deftest wrap-test 
+  (is (= 4
+         (wrap-arg-contract (list 4 gt0?))))
+  (is (thrown-with-msg? java.lang.Exception #"Contract failed"
+        (wrap-arg-contract (list 0 gt0?)))))
+
 
 (defn zip [a b]
   "Returns a lazy sequence consisting of pairs made of the first
-elements of a and b, second etc."
+  elements of a and b, second etc."
   (map list a b))
 
 
-  (defmacro attach-contracts [newname func args-contracts]
-    "Create a new function definition `newname' which calls `func' with
-     the args stored in arg/contracts wrapped in the corresponding
-     contract."
-    (let [args (vec (map first args-contracts))]
-      `(defn ~newname ~args
-         (let [wrapped-args# (map wrap-arg-contract ~args-contracts)]
-           (apply ~func wrapped-args# )))))
+(def faulty-sqrt-2
+  (wrap-arg-contract (list (fn [not-used] -1)
+                           (make-contract gt0? gt0?))))
 
-(defmacro attach-contracts-2 [newname func contracts]
-  "Create a new function definition `newname' which calls `func' with
-   the args stored in arg/contracts wrapped in the corresponding
-   contract."
-  (let [args (vec (map gensym contracts))]
-    `(defn ~newname ~args
-       (print (format "wrapped function called with %s\n" ~args))
-       (let [wrapped-args# (map wrap-arg-contract (zip ~args ~contracts))]
-         (print (format "Applying %s\n" ~func))
-         (apply ~func wrapped-args# )))))
-  
+(deftest faulty-sqrt-2-test
+  (is (thrown-with-msg? java.lang.Exception #"Post condition"
+        (faulty-sqrt-2 1)))
+  (is (thrown-with-msg? java.lang.Exception #"Pre condition"
+        (faulty-sqrt-2 0))))
 
 
-
-
-  (def faulty-sqrt-2
-    (wrap-arg-contract (list (fn [not-used] -1) (make-contract gt0? gt0?))))
-  
-  (deftest faulty-sqrt-2-test
-    (is (thrown-with-msg? java.lang.Exception #"Post condition" (faulty-sqrt-2 1)))
-    (is (thrown-with-msg? java.lang.Exception #"Pre condition" (faulty-sqrt-2 0))))
-  
-  
 #+END_SRC
-
-
-TODO expand on anaphoric diffiulties encountered with ~'foo
+#+latex: \end{listing}
 
 
 Considering the trivial case of a function which adds its two
-arguments, but requires them both to be positive:
+arguments, but requires them both to be positive.  We define a simple
+=add-args= function to perform the arithmetic and then call
+=attach-contracts= to give a new function, add-args-c,  which imposes
+=gt0?= on the two arguments.
 
 
 #+BEGIN_SRC clojure :tangle yes :exports code
-  (defn add-args [a b]
-    (+ a b))
-  
-  (attach-contracts-2 add-args-c
-                    add-args
-                    [gt0? gt0?])
-  
-  (deftest add-args-test
-    (is (= 8  (add-args-c 4 4)))
-    (is (thrown-with-msg? java.lang.Exception #"Contract failed" (add-args-c 0 4))))
-  
+(defn add-args [a b]
+  (+ a b))
+
+(attach-contracts add-args-c
+                  add-args
+                  [gt0? gt0?])
+
+(deftest add-args-test
+  (is (= 8
+         (add-args-c 4 4)))
+  (is (thrown-with-msg? java.lang.Exception #"Contract failed"
+        (add-args-c 0 4))))
+
 #+END_SRC
+
+To understand what the =attach-contracts= macro is doing we can use
+clojure's pretty print and macroexpand functions to see the code
+which is generated at compile time:
+
+#+latex: \begin{listing}[H]
+#+latex: \caption{Macro expansion of attach-contracts}\label{macroexpand} 
+#+BEGIN_SRC clojure :tangle no :exports code 
+(clojure.pprint/pprint (macroexpand-1
+                        '(attach-contracts
+                          add-args-c
+                          add-args
+                          [gt0? gt0?])))
+
+=>
+
+(clojure.core/defn
+  add-args-c
+  [gt0?2398 gt0?2399]
+  (clojure.core/let
+   [wrapped-args__2280__auto__
+    (clojure.core/map
+     dbc.core/wrap-arg-contract
+     (dbc.core/zip [gt0?2398 gt0?2399] [gt0? gt0?]))]
+   (clojure.core/apply add-args wrapped-args__2280__auto__)))
+
+#+END_SRC
+#+latex: \end{listing}
+
+We see from Listing \ref{macroexpand} that the macro expansion of
+=attach-contracts= emits code for the function definition of
+=add-args-c=.  The strangely named arguments to that function,
+=gt0?2398= and =gt0?2399= are an artefact of the call to =gensym= in
+the preamble to attach-contracts.  We see in the last line of the
+expanded macro a call to =apply= which causes the original =add-args=
+function to be called with arguments formed by wrapping the arguments
+passed to =add-args-c=.
+
+
 
 
 
 ** Separation of concerns
-The macro defined in Figure \ref{defcontract1} successfully automates
-the process of wrapping function parameters in contract checking
-code. Unfortunately the resulting code is monolithic; conflating
-function implementation and contract.  When used for functions like
-the =sqrt= example this is not too disastrous: the contract is a
-consequence of the underlying mathematics of the implementation.  But
-if we need similar contracts for other functions reuse will be
-limited.  In some cases contracts will be used to impose business
-rules on a function, rather than implementation artefacts.  In those
-cases we may wish to reuse the function implementation with a
-different contract in an alternative environment.
-
-Ideally a contract should just be an aspect of the function, along
-with its implementation.  Aspect Oriented Programming has been used
-\cite{aopdbc} to implement Design by Contract in AspectJ.  We're
-seeking to develop a similar approach where the contract and
-underlying function implementation can be specified separately and
-combined at will. An example of this, for first order contracts, is
-given in \cite[p.\ 173 - 175]{joy}.  
-
 *** TODO this needs to be tangled
 #+latex: \begin{listing}[H]
 #+latex: \caption{Separating contract from implementation} \label{lst:joy}
 #+srcname: aop
 #+begin_src clojure :tangle no :exports code
-  (declare collect-bodies)
-  
-  (defmacro contract [name & forms]
-    (list* 'fn name (collect-bodies forms)))
-  
-  (declare build-contract)
-  
-  (defn collect-bodies [forms]
-    (for [form (partition 3 forms)])
-    (build-contract form))
-  
-  (defn build-contract [c]
-    (let [args (first c)]
-      (list
-       (into '[f] args)
-       (apply merge
-              (for [con (rest c)]
-                (cond (= (first con) :require)
-                      (assoc {} :pre (vec (rest con)))
-                      (= (first con) :ensure)
-                      (assoc {} :post (vec (rest con)))
-                      :else (throw (Exception. (str "Unknown tag " (first con)))))))
-       (list* 'f args))))
+(declare collect-bodies)
+
+(defmacro contract [name & forms]
+  (list* 'fn name (collect-bodies forms)))
+
+(declare build-contract)
+
+(defn collect-bodies [forms]
+  (for [form (partition 3 forms)])
+  (build-contract form))
+
+(defn build-contract [c]
+  (let [args (first c)]
+    (list
+     (into '[f] args)
+     (apply merge
+            (for [con (rest c)]
+              (cond (= (first con) :require)
+                    (assoc {} :pre (vec (rest con)))
+                    (= (first con) :ensure)
+                    (assoc {} :post (vec (rest con)))
+                    :else (throw (Exception. (str "Unknown tag " (first con)))))))
+     (list* 'f args))))
 #+end_src
 #+latex: \end{listing}
 
@@ -1194,12 +1251,12 @@ associated with a function =times2= which does just that:
 #+latex: \caption{Composition of contract function and constrained function} \label{lst:joy2}
 #+srcname: aop
 #+begin_src clojure :tangle no :exports code
-  (def doubler-contract
-    (contract doubler [x]
-              (:require (pos? x))
-              (:ensure (= (* 2 x) %))))
-  
-  (def times2 (partial doubler-contract #(* 2 %)))
+(def doubler-contract
+  (contract doubler [x]
+            (:require (pos? x))
+            (:ensure (= (* 2 x) %))))
+
+(def times2 (partial doubler-contract #(* 2 %)))
 #+end_src
 #+latex: \end{listing}
 
@@ -1248,11 +1305,11 @@ to this information we use the following macro:
 #+latex: \label{lst:source-loc}
 #+srcname: label
 #+begin_src clojure :tangle yes :exports code
-  
-      
-  (defmacro loc [sym] `(format "%s:%s"
-                               (:file (meta (var ~sym)))
-                               (:line (meta (var ~sym)))))
+
+
+(defmacro loc [sym] `(format "%s:%s"
+                             (:file (meta (var ~sym)))
+                             (:line (meta (var ~sym)))))
 #+end_src
 #+latex: \end{listing}
 
@@ -1278,16 +1335,16 @@ access the function call stack as shown in Listing \ref{stacktrace}
 #+latex: \caption{Stack trace} \label{stacktrace}
 #+srcname: label
 #+begin_src clojure :tangle yes :exports code
-  
-  (defn ignored? [classname]
-    (let [ignored #{"callers" "dbg" "clojure.lang" "swank" "eval"}]
-      (some #(substring? % classname) ignored)))
-  
-  (defn callers []
-    (let [fns (map #(str (.getClassName %))
-                   (-> (Throwable.) .fillInStackTrace .getStackTrace))]
-      (vec (doall (remove ignored? fns)))))
-  
+
+(defn ignored? [classname]
+  (let [ignored #{"callers" "dbg" "clojure.lang" "swank" "eval"}]
+    (some #(substring? % classname) ignored)))
+
+(defn callers []
+  (let [fns (map #(str (.getClassName %))
+                 (-> (Throwable.) .fillInStackTrace .getStackTrace))]
+    (vec (doall (remove ignored? fns)))))
+
 #+end_src
 #+latex: \end{listing}
 
@@ -1361,16 +1418,16 @@ mechanism of the library developer.
 #+latex: \begin{listing}
 #+latex: \caption{Customising failure behaviour} \label{lst:contract-failure}
 #+begin_src clojure :tangle yes :exports code
-  (defn simple-contract-error [position]
-    (throw (Exception. (str "Contract failed: " position))))
-  
-  (def ^{:doc "Function to call on failure of a contract"}
-    *contract-failure-function* #'simple-contract-error)
-  
-  (defn contract-error [position]
-    (*contract-failure-function* position))
-  
-  
+(defn simple-contract-error [position]
+  (throw (Exception. (str "Contract failed: " position))))
+
+(def ^{:doc "Function to call on failure of a contract"}
+  ,*contract-failure-function* #'simple-contract-error)
+
+(defn contract-error [position]
+  (*contract-failure-function* position))
+
+
 #+end_src
 #+latex: \end{listing}
 
@@ -1394,8 +1451,8 @@ future extension.
 
 #+latex: \begin{listing}
 #+begin_src clojure :tangle yes :exports code
-  (defn combine-loc-ff [l1 l2]
-    (take 2 (flatten (vector l1 l2))))
+(defn combine-loc-ff [l1 l2]
+  (take 2 (flatten (vector l1 l2))))
 #+end_src
 #+latex: \end{listing}
 
@@ -1407,8 +1464,8 @@ truncating =take=.
 
 #+latex: \begin{listing}
 #+begin_src clojure :tangle yes :exports code
-  (defn combine-loc-hjl [l1 l2]
-    (flatten (vector l1 l2)))
+(defn combine-loc-hjl [l1 l2]
+  (flatten (vector l1 l2)))
 #+end_src
 #+latex: \end{listing}
 
@@ -1467,16 +1524,7 @@ programmer should adhere to the defined protocol contract, if in
 practice a weaker contract were implemented it is possible that the
 observed behaviour would be assumed to be the documented interface and
 so changing implementations could lead to unexpected contract
-violations.
-
-
-
-
-
-
-
-
-
+violations .
 
 * A worked example
 
@@ -1505,6 +1553,41 @@ Another suite of device specific functions will query the endpoint as
 to whether or not it is actually in a call: not all call setups are
 answered.
 
+
+
+#+latex: \begin{listing}[H]
+#+latex: \caption{Example contract use} 
+#+begin_src clojure :tangle yes :exports code
+
+(defn sip-uri? [s]
+  "True if s is a plausible SIP URI.  This is a very weak implementation, 
+       merely checking for the presence of @, a real version should consider using 
+       javax.sip.address"
+  (and
+   (string? s)
+   (substring? "@" s)))
+
+(import sun.net.util.IPAddressUtil)
+(defn ip-address? [s]
+  "True if s is a plausible string representation of an IPv4 address"
+  (and
+   (string? s)
+   (IPAddressUtil/isIPv4LiteralAddress s))) 
+
+(defn call-setup-hdx [endpoint-ip alias]
+  "Place a call setup attempt from the HDX at `endpoint-ip' to the SIP URI `alias'"
+  ;; code omitted
+  )
+
+
+(defn call-established-hdx? [endpoint-ip timeout]
+  "Waits up to `timeout' to see if the HDX endpoint at `endpoint-ip' is in a call"
+  ;; code omitted
+  )
+
+#+end_src
+#+latex: \end{listing}
+
 For a simple call test we wish to place a call to an alias which,
 barring product bugs, should be answered within 5 seconds.  We
 therefore combine the call setup and status query in a blocking
@@ -1512,110 +1595,49 @@ function which will return on successful call setup, call setup
 failure or failure to establish a call within the given time limit.
 This takes the two device specific functions as arguments.
 
-#+latex: \begin{listing}[H]
-#+latex: \caption{Example contract use} 
-#+begin_src clojure :tangle yes :exports code
-    
-    (defn sip-uri? [s]
-      "True if s is a plausible SIP URI.  This is a very weak implementation, 
-       merely checking for the presence of @, a real version should consider using 
-       javax.sip.address"
-      (and
-       (string? s)
-       (substring? "@" s)))
-    
-    (import sun.net.util.IPAddressUtil)
-    (defn ip-address? [s]
-      "True if s is a plausible string representation of an IPv4 address"
-      (and
-       (string? s)
-       (IPAddressUtil/isIPv4LiteralAddress s))) 
-    
-    (defn call-setup-hdx [endpoint-ip alias]
-      "Place a call setup attempt from the HDX at `endpoint-ip' to the SIP URI `alias'"
-      ;; code omitted
-      )
-    
-    
-    (defn call-established-hdx? [endpoint-ip timeout]
-      "Waits up to `timeout' to see if the HDX endpoint at `endpoint-ip' is in a call"
-      ;; code omitted
-      )
-    
-#+end_src
-#+latex: \end{listing}
-
-
 #+BEGIN_SRC clojure
-    ;; setup-fn takes an valid SIP URI and returns {:ok,:setup-failed}
-    ;; established-fn? returns {true, nil}
-    ;; alias is a SIP URI
-    (defn blocking-setup [setup-fn, established-fn?, alias]
-      (setup-fn alias)
-      (established-fn? 5))
+;; setup-fn takes an valid SIP URI and returns {:ok,:setup-failed}
+;; established-fn? returns {true, nil}
+;; alias is a SIP URI
+(defn blocking-setup [setup-fn, established-fn?, alias]
+  (setup-fn alias)
+  (established-fn? 5))
 
 #+END_SRC    
 
+We wish to allow teh independent development of support for new
+endpoint types, but also need to ensure that the interface software
+developed for those new endpoints conforms to the needs of our test
+harness.  Whilst specifying the requirements in the test harness
+documentation ought to suffice, experience has shown that
+documentaion is often not consulted and even if checked, constraints
+not necessarily complied with.  We will therefore establish contracts
+on our test harness software which place obligations on the functions
+passed to it.
 * Discussion
-** Modularity
 
-As mentioned earlier, using the macro approach described here, it is
-not possible to separate contracts from the implementation of the
-contracted function.  This dramatically reduces modularity - one of
-the key advantages of functional programming according to
-\cite{hughes}.
+** On learning Clojure
 
-We have incurred our dependency on the function source code through
-our macro based approach.  The macros will generate modified function
-source code containing contract checking embedded in the body of the
-function. The contract implementing code must therefore have access to
-the original function body.  This is in contrast to a typical Eiffel
-style first order contract checking approach.  Such a first order
-approach simply provides checks which run before and after function
-execution.
+One of the stated goals of this project was to learn more about
+Clojure as a language.  The two different approaches to applying
+contracts to functions; the monolithic and modular approaches of
+\ref{codegen} arose through my initial unfamiliarity with the
+language.  My first attempts at writing a macro to wrap function
+arguments failed with a number of errors related to symbol resolution
+and inadvertent variable capture or anaphora.  Rather than stepping
+back and finding a simpler approach I began trying to resolve each
+immediate error and soon became enmeshed in a hopelessly complicated
+code.  Deciding that a modular solution could not be produced in
+Clojure, I came up with the monolithic solution presented in Listing
+\ref{}.
 
-In an ideal world we would like to achieve a separation between the
-contract definition and the contracted function.  A build time step
-would then weave together contract and function.  This is very similar
-to the model provided by AspectJ \cite{aspectj}, an Aspect Oriented
-Programming implementation for Java.  AspectJ does not however provide
-a solution to our desired separation of concerns: aspects are run
-before, after or around an advised function and can modify parameters
-passed in and out but not variables within the function body.
-
-Racket, a member of the Scheme/Lisp family, features a sophisticated
-and modular contract mechanism.  This is unsurprising as it comes from
-the authors of \cite{hof}.  Examining their contract implementation
-\cite{racket-src} we see that it makes heavy use of =make-provide=
-syntax transformers \cite{racket-doc-transform}.  These are run when a
-module is loaded and allow the transformation of forms within the
-=provide= expression.  This low level language implementation provides
-greater access than our simplistic extension of the function
-definition, allowing Racket to implement contracts whilst maintaining
-the desired modularity of functional languages.  It also allows Racket
-to follow Eiffel and implement contract verification only at module
-boundaries.  Ignoring arguments about run time speed, the ability for
-a call within a module to violate a contract can be useful,
-particularly where invariants are concerned.
-
-
-
-Replicating the sophisticated Racket macro system in Clojure is beyond
-the scope of this dissertation, but Racket's approach does provide
-corroborative evidence that a low level approach is appropriate to
-solving the contract modularity problem.  If we step back and consider
-the details of what happens when a function is defined an alternative
-approach presents itself.
-
-At the heart of a Lisp implementation is the function =eval=.  Every
-form which is not either a special form or a macro is considered to be
-an expression and evaluated to yield a value.  Symbols within the
-expression are resolved through searching the current namespace and
-the local scope.  Function arguments are found in the local scope and
-so their value is that of the local binding.  Here lies our
-opportunity: replacing the locally bound function argument with a
-wrapped version should achieve our goal.
-
+As the dissertation progressed my familiarity with the language, and
+in particular macros, increased.  Prompted by a question from my
+tutor, Dr Hinze, I revisited the modular solution and this time was
+able to achieve a satisfactory solution --- the =attach-contracts=
+macro of Listing \ref{ }.  So why did I initially go down a blind
+alley; more importantly is that reason relevant to the rest of my
+programming? 
 
 
 ** Meta programming
