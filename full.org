@@ -1655,8 +1655,8 @@ author of a plugin will be required to register his function in that map.
 #+begin_src clojure :tangle yes :exports code
 (def concrete-setup-request (ref {}))
 
-(defn- add-setup-request-impl [type fn]
-  (dosync (alter concrete-setup-request conj  {type fn})))
+(defn- add-setup-request-impl [type fn-impl]
+  (dosync (alter concrete-setup-request conj  {type fn-impl})))
 
 
 (defn call-setup-request [type endpoint uri]
@@ -1668,34 +1668,53 @@ author of a plugin will be required to register his function in that map.
 
 TODO ensure this is in outline on clojure
 
-A brief recap on Clojure's approach to concurrency and mutable data.
-Most objects within Clojure are immutable, mutabilty must be
+A brief recap on Clojure's approach to concurrency and mutable data:
+most objects within Clojure are immutable, mutabilty must be
 explicit.  The call to =(ref {})= in =def-concrete-setup-request=
 establishes a named mutable reference to an, initially empty, map.
 =add-setup-request-impl= provides a means of updating that map,
 =dosync= provides a transaction within which =alter= invokes =conj=
-on =concrete-setup-request=, appending the map ={type fn}=.  Within
+on =concrete-setup-request=, appending the map ={type fn-impl}=.  Within
 =call-setup-request= we access the current value of
 concrete-setup-request via the invocation of =deref=.
 
 At this point we have no control over the implementation of the
 functions stored in =concrete-setup-request= beyond the moral pressure
 of documentation.  We wish to be able to place a contract on those
-functions passed to =add-setup-request-impl=.  We will choose to place
-no restriction on the =type= argument: though we currently expect it
-to be a keyword by idiom, there's no fundamental reason other types
-should not be used so we endeavour to maintain flexibility.
+functions passed to =add-setup-request-impl=.  
 
-We therefore define a contractual version of
-=add-setup-request-impl=, =add-setup-request-impl-c=.  We have
-restricted access to the non contractual version by declaring it
-private to our name space through the use of =defn-= rather than
-=defn=.  It should be noted that this provides protection against
-inadvertent rather than malicious invocation. 
+From knowledge of the implementation of =call-setup-request=, we know
+that the =type= argument will be invoked as a function call on a map.
+This usage is satisfied by either a function or a keyword.  Though we
+expect a keyword to be used, unnecessary restrictions are to be
+avoided so we endeavour to include both possibilities.  The =fn=
+parameter should take two arguments: a IPv4 address and a SIP URI.
+We have already considered predicates for the ranges of those two
+arguments but are in danger of missing the assumption on the arity
+=fn=.  Functions declared through use of the =defn= macro contain a
+metadata item =:arglists= which, as implied by the name, provides a
+list of the arguments to the function.  This does not provide a
+universal solution as lambda functions, defined with =fn=, do not
+contain this meta-data item.  We will therefore have to ignore the
+arity of =fn-impl=, relying on a run time exception being thrown
+should it not match the two argument requirement.
 
+We therefore define a contractual version of =add-setup-request-impl=,
+=add-setup-request-impl-c=.  We have restricted access to the non
+contractual version by declaring it private to our name space through
+the use of =defn-= rather than =defn=.  It should be noted that this
+provides protection against inadvertent rather than malicious
+invocation.
+
+=add-setup-request-impl= takes two arguments.  We wish to place a
+contract of =lenient= on the first; any value will suffice.  
 #+latex: \begin{listing}[H]
 #+latex: \caption{} 
 #+begin_src clojure :tangle yes :exports code
+
+(defn possible-map-index? [key]
+  (or (fn? key)
+      (keyword? key)))
 
 (attach-contracts add-setup-request-impl-c 
                   add-setup-request-impl
@@ -1785,7 +1804,22 @@ TODO discuss
 
 - problems with initial monolithic wrap implementation
 
-- symbols, anaphora intoduced by =~'foo= 
+- symbols, anaphora intoduced by =~'foo=
+
+** DBC authenticity
+TODO Move thsi in to impl body
+
+Many Design by Contract frameworks provide contract enforcement only
+at the boundaries of a module.  Our implementation does not
+inherently provide that but by defining non-contractual functions as
+private to a name space and their contractual versions as public a
+similar effect may be achieved.  Whilst privacy enforcement is not
+possible in Clojure
+\cite(http://christophermaier.name/blog/2011/04/30/not-so-private-clojure-functions),
+the idiom of hiding non-contractual functions could be strengthened
+through a check that the implementing function passed to
+=attach-contracts= is indeed private.
+
 
 ** The current state of Design by Contract 
 
