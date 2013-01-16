@@ -19,7 +19,7 @@
 
 # If we set the twoside option to article then the following will
 # cause each section to appear on an odd numbered page.
-# Ignore this though as requirements are to print single sided.
+# Ignore this though as requirements are to print single sided. 
 # \let\stdsection\section  
 # \def\section{\cleardoublepage\stdsection}  
 
@@ -308,7 +308,6 @@ shows the construction of a proper list
 
 # cons cell diagram
 \begin{figure}
-\label{fig:cons}
 \centering
 \usetikzlibrary[arrows]
 \begin{tikzpicture}
@@ -329,6 +328,8 @@ shows the construction of a proper list
 \end{tikzpicture}
 
 \caption{Lisp cons cells and lists}
+\label{fig:cons}
+
 \end{figure}
 
 Since lists form the basic building block of the language, and are
