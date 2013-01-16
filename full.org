@@ -1535,36 +1535,98 @@ violations .
 
 * A worked example
 
-My day job is to develop software for video conferencing
-infrastructure; effectively a telephone exchange for video
-conferencing.  In order to test this we use a number of video
-endpoints (analogous to a telephone) to place calls in to the
-system.  Interoperability between our equipment and the various
-endpoint manufacturers is an important requirement so we test using a
-range of endpoints.
+My day job is to develop software that forms the infrastructure for a
+video conferencing deployment - effectively a telephone exchange for
+video conferencing.  In order to test this we use a number of video
+endpoints (analogous to a telephone) to place calls in to the system.
+Interoperability between our equipment and the various endpoint
+manufacturers is an important requirement so we test using a range of
+endpoints.
 
-The endpoints all nominally speak the standardised protocols, SIP and
-H.323, over the LAN to the infrastructure equipment.  They also
-provide APIs to allow automation of call setup and tear down as well
-as status reporting. These APIs vary widely, not only between
-manufacturers but also between product lines from a single
-manufacturer.
+The endpoints all nominally speak the same standardised line side
+protocols, SIP \cite{sip} and H.323\cite{h323}, to the infrastructure
+equipment.  They also provide APIs to allow automation of call setup
+and tear down as well as status reporting. These APIs vary widely, not
+only between manufacturers but also between product lines or even
+software releases from a single manufacturer.
 
-We will provide a series of device specific functions to request an
-endpoint to make a call setup attempt. These will use simple first
-order contracts to check their pre and post conditions: have they
-been given a valid endpoint address and a valid SIP URI, are they
-returning an agreed value.
+We desire to produce a framework which will provide basic third party
+call control for an abstract endpoint type. The framework can then be
+used in the interop test framework for the product under development.
+This will require the ability to set up; tear down and answer calls.
+Basic state querying will also be required: is the endpoint in a call
+or not.  This is a simplified approach for the purposes of this
+dissertation - our current test system is significantly more involved,
+checking audio and video codec selection call quality and a number of
+other areas.  As new endpoint types are acquired in the test lab
+device specific plugin functions can be written.  These may be passed
+in to function calls in the abstract framework for later invocation,
+this adding support for the new device to the interop test framework.
+This provides a functional programming analogue for inheritance in
+object oriented programming.
+
+As the plugin functions will be written over a period of time by a
+variety of people it is important that the required interface to the
+abstract call control framework is well defined.  This requirement for
+interface definition for later users shows an important distinction
+between the role of unit tests for the abstract framework and
+contracts placed upon it.  Whilst a unit test framework can
+demonstrate that the abstract framework functions according to its
+specification it places no constraint on the later writer of a
+function supporting a new device.  The test framework can provide
+additional documentation of the intended behaviour and as such is
+valuable, though only if the plugin writer pays attention to said
+documentation.
+
+By providing a contract on the functions taking plugins as a parameter
+we provide not only documentation as to expected plugin arguments and
+return values, but also enforcement of that expectation.
+
+
+
+TODO hanging words
+
+We will then provide a series of device specific functions to
+request an endpoint to make a call setup attempt. These will use
+simple first order contracts to check their pre and post conditions:
+have they been given a valid endpoint address and a valid SIP URI, are
+they returning an agreed value.
 
 Another suite of device specific functions will query the endpoint as
 to whether or not it is actually in a call: not all call setups are
 answered.
 
 
+Looking first at the call setup request: we want to request a
+particular endpoint, identified by IP address, to call a particular
+destination as identified by a SIP URI; something that looks like an
+email address and performs a similar identifying role in video
+communications.  Call set up request are not the same as successful
+call establishment.  At the end of the request we know whether or not
+the endpoint will honour the set up attempt, but not whether or not it
+will be successful.  The request function can therefore signal whether
+an endpoint was communicated with (is their an active endpoint at the given
+IP address?) and whether or not the request will be honoured
+(protocol error? already in a call?).  We will represent this set of
+possible return values by the set of keywords
+={:not-found :ok :error}=.
+
+We now have the basis of a contract that the framework can place on
+plugin functions.  The plugin should take two parameters, one of
+which is an IP address, the other a SIP URI.  It should return one of
+the given values.  We will therefore require predicates to ascertain
+the validity of the contract.
+
 
 #+latex: \begin{listing}[H]
-#+latex: \caption{Example contract use} 
+#+latex: \caption{Example contract definitions} 
 #+begin_src clojure :tangle yes :exports code
+(import sun.net.util.IPAddressUtil)
+(defn ip-address? [s]
+  "True if s is a plausible string representation of an IPv4 address"
+  (and
+   (string? s)
+   (IPAddressUtil/isIPv4LiteralAddress s))) 
 
 (defn sip-uri? [s]
   "True if s is a plausible SIP URI.  This is a very weak implementation, 
@@ -1574,26 +1636,83 @@ answered.
    (string? s)
    (substring? "@" s)))
 
-(import sun.net.util.IPAddressUtil)
-(defn ip-address? [s]
-  "True if s is a plausible string representation of an IPv4 address"
+(defn call-setup-result? [k]
+  "True if k is a valid response to a call setup request"
   (and
-   (string? s)
-   (IPAddressUtil/isIPv4LiteralAddress s))) 
+   (keyword? k)
+   (k (set [:not-found :ok :error]))))
+#+end_src
+#+latex: \end{listing}
 
-(defn call-setup-hdx [endpoint-ip alias]
-  "Place a call setup attempt from the HDX at `endpoint-ip' to the SIP URI `alias'"
-  ;; code omitted
-  )
+We now provide the abstract call setup request function.  All of the
+abstract functions will take the endpoint type as their first
+argument.  This will be used to discover the appropriate function in a
+global map of setup request implementations indexed by type.  Th
+author of a plugin will be required to register his function in that map. 
+
+#+latex: \begin{listing}[H]
+#+latex: \caption{} 
+#+begin_src clojure :tangle yes :exports code
+(def concrete-setup-request (ref {}))
+
+(defn- add-setup-request-impl [type fn]
+  (dosync (alter concrete-setup-request conj  {type fn})))
 
 
-(defn call-established-hdx? [endpoint-ip timeout]
-  "Waits up to `timeout' to see if the HDX endpoint at `endpoint-ip' is in a call"
-  ;; code omitted
-  )
+(defn call-setup-request [type endpoint uri]
+  (let [plugin-fn (type (deref concrete-setup-request))]
+    (plugin-fn endpoint uri)))
+#+end_src
+#+latex: \end{listing}
+
+
+TODO ensure this is in outline on clojure
+
+A brief recap on Clojure's approach to concurrency and mutable data.
+Most objects within Clojure are immutable, mutabilty must be
+explicit.  The call to =(ref {})= in =def-concrete-setup-request=
+establishes a named mutable reference to an, initially empty, map.
+=add-setup-request-impl= provides a means of updating that map,
+=dosync= provides a transaction within which =alter= invokes =conj=
+on =concrete-setup-request=, appending the map ={type fn}=.  Within
+=call-setup-request= we access the current value of
+concrete-setup-request via the invocation of =deref=.
+
+At this point we have no control over the implementation of the
+functions stored in =concrete-setup-request= beyond the moral pressure
+of documentation.  We wish to be able to place a contract on those
+functions passed to =add-setup-request-impl=.  We will choose to place
+no restriction on the =type= argument: though we currently expect it
+to be a keyword by idiom, there's no fundamental reason other types
+should not be used so we endeavour to maintain flexibility.
+
+We therefore define a contractual version of
+=add-setup-request-impl=, =add-setup-request-impl-c=.  We have
+restricted access to the non contractual version by declaring it
+private to our name space through the use of =defn-= rather than
+=defn=.  It should be noted that this provides protection against
+inadvertent rather than malicious invocation. 
+
+#+latex: \begin{listing}[H]
+#+latex: \caption{} 
+#+begin_src clojure :tangle yes :exports code
+
+(attach-contracts add-setup-request-impl-c 
+                  add-setup-request-impl
+                  [lenient (make-contract foo bar baz)])
 
 #+end_src
 #+latex: \end{listing}
+
+
+
+The author of a function providing support for say Polycom's HDX
+endpoint would need to 
+
+
+
+
+
 
 For a simple call test we wish to place a call to an alias which,
 barring product bugs, should be answered within 5 seconds.  We
@@ -1610,8 +1729,21 @@ This takes the two device specific functions as arguments.
   (setup-fn alias)
   (established-fn? 5))
 
-#+END_SRC    
 
+
+(defn call-setup-hdx [endpoint-ip alias]
+  "Place a call setup attempt from the HDX at `endpoint-ip' to the SIP URI `alias'"
+  ;; code omitted
+  )
+
+
+(defn call-established-hdx? [endpoint-ip timeout]
+  "Waits up to `timeout' to see if the HDX endpoint at `endpoint-ip' is in a call"
+  ;; code omitted
+  )
+
+#+END_SRC    
+ 
 We wish to allow teh independent development of support for new
 endpoint types, but also need to ensure that the interface software
 developed for those new endpoints conforms to the needs of our test
