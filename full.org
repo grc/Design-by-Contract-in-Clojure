@@ -713,15 +713,11 @@ emitted with the culprit identified appropriately.
 
 
 
-;; (defn pred [contract value]
-;;   "CONTRACT must be a function which accepts a single value to check."
-;;   (contract value))
-
 (defn pred [contract value]
   "CONTRACT must be a function which accepts a single value to check."
-  ( (if (symbol? contract)
-      (resolve contract)
-      contract) value))
+  (contract value))
+
+
 
 (declare fo-wrap ho-wrap-1)
 
@@ -1084,31 +1080,36 @@ contracts as the first argument
 #+BEGIN_SRC clojure :tangle yes :exports code
 (defn wrap-x [contract value p n]
   (if (flat? contract)
-    (fo-wrap contract value p n)
+    (fo-wrap (get contract 0) value p n)
     (ho-wrap contract value p n)))
 
 
+(defn fo-wrap  [contract value p n]
+  (if (pred contract value)
+    value
+    (contract-error p)))
+
 (defn ho-wrap [ct x p n]
   (let [d (dom ct)
-        r (rng ct)
-        arity (count dom)]
+        r (vector(rng ct))
+        arity (count d)]
     
     (cond
       (= 0 arity)
-      (fn [] (wrap r
+      (fn [] (wrap-x r
                    (x)
                    p
                    n))
       (= 1 arity)
-      (fn [a] (wrap r
-                    (x (wrap d[0] a n p))
+      (fn [a] (wrap-x r
+                      (x (wrap-x (vector (get d 0)) a n p))
                     p
                     n))
       (= 2 arity)
-      (fn [a b] (wrap r
-                      (x (wrap d[0] a n p) (wrap d[1] b n p))
-                      p
-                      n)))))
+      (fn [a b] (wrap-x r
+                        (x (wrap-x (vector (get d 0)) a n p) (wrap (vector (get  d 1 )) b n p))
+                        p
+                        n)))))
 
 
 #+END_SRC
@@ -1165,16 +1166,16 @@ replaced by the =newname= parameter passed in to the macro and
    arg wrapped in that contract"
   (let [arg (first arg-contract)
         contract (second arg-contract)]
-    (wrap contract arg
+    (wrap-x contract arg
           (:post-message contract)
           (:pre-message contract))))
 
 
 (deftest wrap-test 
   (is (= 4
-         (wrap-arg-contract (list 4 gt0?))))
+         (wrap-arg-contract (list 4 [gt0?]))))
   (is (thrown-with-msg? java.lang.Exception #"Contract failed"
-        (wrap-arg-contract (list 0 gt0?)))))
+        (wrap-arg-contract (list 0 [gt0?])))))
 
 
 (defn zip [a b]
@@ -1185,7 +1186,7 @@ replaced by the =newname= parameter passed in to the macro and
 
 (def faulty-sqrt-2
   (wrap-arg-contract (list (fn [not-used] -1)
-                           (make-contract-1 gt0? gt0?))))
+                           (make-contract-1 [gt0?] gt0?))))
 
 (deftest faulty-sqrt-2-test
   (is (thrown-with-msg? java.lang.Exception #"Post condition"
@@ -1211,7 +1212,7 @@ arguments, but requires them both to be positive.  We define a simple
 
 (attach-contracts add-args-c
                   add-args
-                  [gt0? gt0?])
+                  [ [gt0?] [gt0?] ])
 
 (deftest add-args-test
   (is (= 8
