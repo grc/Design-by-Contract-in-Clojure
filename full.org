@@ -691,7 +691,7 @@ emitted with the culprit identified appropriately.
 
 
 
-(declare make-contract dom rng flat?)
+(declare make-contract-1 dom rng flat?)
 
 (defn lenient [_]
   true)
@@ -704,10 +704,10 @@ emitted with the culprit identified appropriately.
 (deftest contract-construction
   (testing "Flat predicate"
     (is (flat? :foo))
-    (is (not (flat? (make-contract :foo :bar)))))
+    (is (not (flat? (make-contract-1 :foo :bar)))))
   (testing "Contract construction"
-    (is (= 4 (count (make-contract :foo :bar))))
-    (is ((dom (make-contract lenient lenient)) 42))))
+    (is (= 4 (count (make-contract-1 :foo :bar))))
+    (is ((dom (make-contract-1 lenient lenient)) 42))))
 
 
 
@@ -723,7 +723,7 @@ emitted with the culprit identified appropriately.
       (resolve contract)
       contract) value))
 
-(declare fo-wrap ho-wrap)
+(declare fo-wrap ho-wrap-1)
 
                                         ; TODO look at using clojure-contrib.condition/raise here
 (defn    contract-error [position]
@@ -746,14 +746,14 @@ TODO need two versions of =pred=, second of which introduces =resolve=
 (defn wrap [contract value p n]
   (if (flat? contract)
     (fo-wrap contract value p n)
-    (ho-wrap contract value p n)))
+    (ho-wrap-1 contract value p n)))
 
 (defn fo-wrap  [contract value p n]
   (if (pred contract value)
     value
     (contract-error p)))
 
-(defn ho-wrap [ct x p n]
+(defn ho-wrap-1 [ct x p n]
   (let [d (dom ct)
         r (rng ct)]
     (fn [y] (wrap r
@@ -780,16 +780,16 @@ functions.  We need to select a data structure to represent the
 contracts.  As is idiomatic in Clojure development, the first data
 structure of choice is =map=.  Here we define two keys, =:dom= and
 =:rng= to hold the domain and range (pre and post conditions).  We
-provide two implementations of =make-contract=: =make-contract/2= is
-a simple shorthand version which calls =make-contract/4= with default
+provide two implementations of =make-contract-1=: =make-contract-1/2= is
+a simple shorthand version which calls =make-contract-1/4= with default
 values of the message to be used in the case of pre or post condition
 failure.
 
 
 #+begin_src clojure :tangle yes :exports code
-(defn make-contract 
+(defn make-contract-1 
   ([pre post]
-     (make-contract pre post "Pre condition failed" "Post condition failed"))
+     (make-contract-1 pre post "Pre condition failed" "Post condition failed"))
   ([pre post pre-message post-message]
      {:dom pre :rng post :pre-message pre-message :post-message post-message}))
 
@@ -819,7 +819,7 @@ positive.
    (pos? x)))
 
 (def faulty-sqrt
-  (wrap (make-contract gt0? gt0?)
+  (wrap (make-contract-1 gt0? gt0?)
         (fn [not-used] -1)
         "Post condition violated" "Pre condition violated"))
 
@@ -872,7 +872,7 @@ only accept functions which take and return  numbers greater than 0.
   ;;; (bigger-than-0 -> bigger-than-0) -> any
 (defn ff-save [f] (dosync (ref-set
                            ff-saved
-                           (wrap (make-contract gt0? gt0?) f "p" "n")) ))
+                           (wrap (make-contract-1 gt0? gt0?) f "p" "n")) ))
 
 
   ;;; bigger-than-0 -> bigger-than-0
@@ -939,7 +939,7 @@ a single argument.
        ~(clojure.walk/postwalk-replace wrapped-arg body))))
 
 
-(defcontract-1 ff-save-2 f (make-contract gt0? gt0?)
+(defcontract-1 ff-save-2 f (make-contract-1 gt0? gt0?)
   (dosync (ref-set ff-saved f)))
 
 #+end_src
@@ -1004,7 +1004,7 @@ Using this macro we can simplify the definitions of =ff-use= and
 
 
 (defcontract-2 ff-save-x f 
-  (make-contract gt0? gt0?)
+  (make-contract-1 gt0? gt0?)
   lenient
   (dosync (ref-set ff-saved f)))
 
@@ -1066,6 +1066,55 @@ contracted functions, that would involve a lot of repetitive boiler
 plate coding.  This is where Lisp macros are useful.  The =wrapit=
 function above provides an example of the output we wish, so we use
 that to design our macro.
+
+We will also be extending our approach to handle functions of more
+than one argument.  In order to do this we must modify the =ho-wrap-1=
+function we have been using.  Previously, as seen in Listing
+\ref{lst:wrap} this has been returning a lambda function of arity 1.
+We now wish to handle an arbitrary number of arguments.  Whilst it is
+not in general possible to determine the arity of a Clojure function,
+in this case we may assume that the number of contracts in the domain
+represents the arity.  We therefore wish to generate a lambda
+function with a argument for each domain contract.  We do not need to
+modify =make-contract=, instead we just pass a vector of domain
+contracts as the first argument
+
+#+latex: \begin{listing}[H]
+#+latex: \caption{Wrapping functions with multiple arguments}\label{ho-wrap} 
+#+BEGIN_SRC clojure :tangle yes :exports code
+(defn wrap-x [contract value p n]
+  (if (flat? contract)
+    (fo-wrap contract value p n)
+    (ho-wrap contract value p n)))
+
+
+(defn ho-wrap [ct x p n]
+  (let [d (dom ct)
+        r (rng ct)
+        arity (count dom)]
+    
+    (cond
+      (= 0 arity)
+      (fn [] (wrap r
+                   (x)
+                   p
+                   n))
+      (= 1 arity)
+      (fn [a] (wrap r
+                    (x (wrap d[0] a n p))
+                    p
+                    n))
+      (= 2 arity)
+      (fn [a b] (wrap r
+                      (x (wrap d[0] a n p) (wrap d[1] b n p))
+                      p
+                      n)))))
+
+
+#+END_SRC
+#+latex: \end{listing}
+
+
 
 We forward declare a pair of functions: =wrap-arg-contract= will
 apply wrap to an argument and contract extracted from a list;
@@ -1136,7 +1185,7 @@ replaced by the =newname= parameter passed in to the macro and
 
 (def faulty-sqrt-2
   (wrap-arg-contract (list (fn [not-used] -1)
-                           (make-contract gt0? gt0?))))
+                           (make-contract-1 gt0? gt0?))))
 
 (deftest faulty-sqrt-2-test
   (is (thrown-with-msg? java.lang.Exception #"Post condition"
@@ -1723,7 +1772,7 @@ an IPv4 address and a SIP URI, returning a =code-setup-request-result=.
 
 (attach-contracts add-setup-request-impl-c 
                   add-setup-request-impl
-                  [callable? (make-contract ip-address? sip-uri?)])
+                  [callable? (make-contract-1 ip-address? sip-uri?)])
 
 #+end_src
 #+latex: \end{listing}
@@ -1891,7 +1940,7 @@ To Be Completed
 * Notes :noexport:
 
 
-make-contract is actually making a HIGH ORDER contract.  First order
+make-contract-1 is actually making a HIGH ORDER contract.  First order
 contracts are flat assertions.
 
 what do we do about functions that take more than one parameter?
