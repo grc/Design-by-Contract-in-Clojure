@@ -1699,26 +1699,31 @@ contain this meta-data item.  We will therefore have to ignore the
 arity of =fn-impl=, relying on a run time exception being thrown
 should it not match the two argument requirement.
 
-We therefore define a contractual version of =add-setup-request-impl=,
-=add-setup-request-impl-c=.  We have restricted access to the non
-contractual version by declaring it private to our name space through
-the use of =defn-= rather than =defn=.  It should be noted that this
-provides protection against inadvertent rather than malicious
-invocation.
+We therefore define a contractual version of =add-setup-request-impl=
+conventionally named =add-setup-request-impl-c=.  We have restricted
+access to the non contractual version by declaring it private to our
+name space through the use of =defn-= rather than =defn=.  It should
+be noted that this provides protection against inadvertent rather than
+malicious invocation.
 
 =add-setup-request-impl= takes two arguments.  We wish to place a
-contract of =lenient= on the first; any value will suffice.  
+contract of =callable?= on the first; the parameter must form part of
+a valid sexpr when appearing as the first element of a list.  The
+second argument must be a function, of assumed arity 2, taking both
+an IPv4 address and a SIP URI, returning a =code-setup-request-result=.
+
 #+latex: \begin{listing}[H]
 #+latex: \caption{} 
 #+begin_src clojure :tangle yes :exports code
+(defn callable? [f]
+  (or
+   (keyword? f)
+   (function? f)))
 
-(defn possible-map-index? [key]
-  (or (fn? key)
-      (keyword? key)))
 
 (attach-contracts add-setup-request-impl-c 
                   add-setup-request-impl
-                  [lenient (make-contract foo bar baz)])
+                  [callable? (make-contract ip-address? sip-uri?)])
 
 #+end_src
 #+latex: \end{listing}
