@@ -1136,7 +1136,7 @@ a simple use and compare the generated code to that of =wrapit= above.
   "Create a new function definition `newname' which calls
   `func' with the args stored in arg/contracts wrapped in
    the corresponding contract."
-  (let [args (vec (map gensym  (range (count contracts)))]
+  (let [args (vec (map gensym  (range (count contracts))))]
     `(defn ~newname ~args
        (let [wrapped-args# 
              (map wrap-arg-contract (zip ~args ~contracts))]
@@ -1281,11 +1281,11 @@ return a number greater than zero.
 
 (def two-arg-contract (make-contract-1 [lenient lenient] gt0?))
 
-(attach-contracts two-arg-c two-arg [two-arg-contract])
+(attach-contracts two-arg-c invoke-two-arg [two-arg-contract])
 
 (deftest two-arg-test
   (is (= 3 (two-arg-c +)))
-  (is (thrown-with-msg? java.lang.Exception #"Post") (two-args-c -) ))
+  (is (thrown-with-msg? java.lang.Exception #"Post" (two-arg-c -))))
 
 #+END_SRC
 
