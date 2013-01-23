@@ -1078,6 +1078,8 @@ contracts as the first argument
 #+latex: \begin{listing}[H]
 #+latex: \caption{Wrapping functions with multiple arguments}\label{ho-wrap} 
 #+BEGIN_SRC clojure :tangle yes :exports code
+(declare fo-wrap ho-wrap)
+
 (defn wrap-x [contract value p n]
   (if (flat? contract)
     (fo-wrap (get contract 0) value p n)
@@ -1107,7 +1109,7 @@ contracts as the first argument
                     n))
       (= 2 arity)
       (fn [a b] (wrap-x r
-                        (x (wrap-x (vector (get d 0)) a n p) (wrap (vector (get  d 1 )) b n p))
+                        (x (wrap-x (vector (get d 0)) a n p) (wrap-x (vector (get  d 1 )) b n p))
                         p
                         n)))))
 
@@ -1134,7 +1136,7 @@ a simple use and compare the generated code to that of =wrapit= above.
   "Create a new function definition `newname' which calls
   `func' with the args stored in arg/contracts wrapped in
    the corresponding contract."
-  (let [args (vec (map gensym contracts))]
+  (let [args (vec (map gensym  (range (count contracts)))]
     `(defn ~newname ~args
        (let [wrapped-args# 
              (map wrap-arg-contract (zip ~args ~contracts))]
@@ -1143,6 +1145,8 @@ a simple use and compare the generated code to that of =wrapit= above.
 
 #+END_SRC
 #+latex: \end{listing}
+TODO explain use of =range=
+
 
 As before, this emits a function definition.  The difference to that
 in the =defcontract= macro is that in the last line the call to
@@ -1222,6 +1226,8 @@ arguments, but requires them both to be positive.  We define a simple
 
 #+END_SRC
 
+
+
 To understand what the =attach-contracts= macro is doing we can use
 clojure's pretty print and macroexpand functions to see the code
 which is generated at compile time:
@@ -1259,6 +1265,29 @@ expanded macro a call to =apply= which causes the original =add-args=
 function to be called with arguments formed by wrapping the arguments
 passed to =add-args-c=.
 
+
+Considering now higher order functions, we will introduce
+=invoke-two-arg=, a function which takes as its single parameter a
+function of arity two.  It applies this function to fixed arguments.
+We also introduce =two-arg-contract= which will constrain the
+function parameter definition: it will take any arguments but must
+return a number greater than zero.
+
+
+#+BEGIN_SRC clojure :tangle yes :exports code
+
+(defn- invoke-two-arg [f]
+  (f 1 2))
+
+(def two-arg-contract (make-contract-1 [lenient lenient] gt0?))
+
+(attach-contracts two-arg-c two-arg [two-arg-contract])
+
+(deftest two-arg-test
+  (is (= 3 (two-arg-c +)))
+  (is (thrown-with-msg? java.lang.Exception #"Post") (two-args-c -) ))
+
+#+END_SRC
 
 
 
@@ -1686,7 +1715,7 @@ the validity of the contract.
    (string? s)
    (substring? "@" s)))
 
-(defn call-setup-result? [k]
+(defn call-setup-request-result? [k]
   "True if k is a valid response to a call setup request"
   (and
    (keyword? k)
@@ -1771,13 +1800,90 @@ an IPv4 address and a SIP URI, returning a =code-setup-request-result=.
    (function? f)))
 
 
+(def setup-request-contract (make-contract-1 [ip-address? sip-uri?] call-setup-request-result?))
+
 (attach-contracts add-setup-request-impl-c 
                   add-setup-request-impl
-                  [callable? (make-contract-1 ip-address? sip-uri?)])
+                  [[callable?] setup-request-contract])
+
+
+
+
+(defn hdx-setup [ip-address uri]
+  ;; Product specific code omitted
+  :ok)
+
+(defn faulty-return-value [ip-address uri]
+  ;; Product specific code omitted
+  0)
+
+(deftest setup-request-test
+  (add-setup-request-impl-c :hdx 'hdx-setup)
+  (is (= :ok (call-setup-request :hdx "192.168.10.1" "me@example.com" ))))
+
 
 #+end_src
 #+latex: \end{listing}
 
+Ths one works!
+(clojure.core/defn
+ add-setup-request-impl-c
+ [callable?4395 c?4396]
+ (clojure.core/let
+  [wrapped-args__4305__auto__
+   (clojure.core/map
+    dbc.core/wrap-arg-contract
+    (dbc.core/zip [callable?4395 c?4396] [[callable?] c?]))]
+  (clojure.core/assert add-setup-request-impl)
+  (clojure.core/assert wrapped-args__4305__auto__)
+  (clojure.core/print
+   (clojure.core/format
+    "attach-contracts calling original with %s"
+    wrapped-args__4305__auto__))
+  (clojure.core/apply
+   add-setup-request-impl
+   wrapped-args__4305__auto__)))
+
+
+
+
+
+
+TODO: above fails because 
+
+(clojure.pprint/pprint (macroexpand-1 '(attach-contracts bar-c bar [(make-contract-1 [gt0? gt0?] gt0?)] )))
+expands like
+(clojure.core/defn
+ bar-c
+ [(make-contract-1 [gt0? gt0?] gt0?)7867]
+ (clojure.core/let
+  [wrapped-args__7473__auto__
+   (clojure.core/map
+    dbc.core/wrap-arg-contract
+    (dbc.core/zip
+     [(make-contract-1 [gt0? gt0?] gt0?)7867]
+     [(make-contract-1 [gt0? gt0?] gt0?)]))]
+  (clojure.core/apply bar wrapped-args__7473__auto__)))
+
+
+whilst (clojure.pprint/pprint (macroexpand-1
+                        '(attach-contracts
+                          add-args-c
+                          add-args
+
+
+expands to
+                          [gt0? gt0?])))
+(clojure.c
+ore/defn
+ add-args-c
+ [gt0?7876 gt0?7877]
+ (clojure.core/let
+  [wrapped-args__7473__auto__
+   (clojure.core/map
+    dbc.core/wrap-arg-contract
+    (dbc.core/zip [gt0?7876 gt0?7877] [gt0? gt0?]))]
+  (clojure.core/apply add-args wrapped-args__7473__auto__)))
 
 
 The author of a function providing support for say Polycom's HDX
