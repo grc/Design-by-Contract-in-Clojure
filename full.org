@@ -732,7 +732,6 @@ emitted with the culprit identified appropriately.
 #     use trampolining:
 #     http://groups.google.com/group/clojure/msg/3addf875319c5c10
 
-TODO need two versions of =pred=, second of which introduces =resolve=
 
 #+latex: \begin{listing}[H]
 #+LATEX: \caption{Clojure implementation of \texttt{wrap}}\label{lst:wrap}
@@ -911,7 +910,10 @@ thing computers were intended to relieve us from.  Clojure, like other
 Lisps, has a sophisticated macro system which can be used to
 automatically generate this code.  We will be using this macro system
 to allow us attach contracts to functions, automatically wrapping the
-arguments.  We first look at a monolithic approach to the problem
+arguments.  
+
+We will look at two approaches to using macros to apply the wrap
+function: we first look at a monolithic approach to the problem
 where we define a new macro, =defcontract= which requires access to
 the body of the function we are applying contracts to.  We then
 examine a second, superior, version where existing functions may have
@@ -1024,6 +1026,8 @@ Using this macro we can simplify the definitions of =ff-use= and
 
 #+end_src
 
+
+**** A modular approach
 The macro defined in Figure \ref{defcontract1} successfully automates
 the process of wrapping function parameters in contract checking
 code. Unfortunately the resulting code is monolithic; conflating
@@ -1311,73 +1315,7 @@ which obeys =two-arg-contract=:
 #+END_SRC
 
 
-** Separation of concerns
-*** TODO this needs to be tangled
-#+latex: \begin{listing}[H]
-#+latex: \caption{Separating contract from implementation} \label{lst:joy}
-#+srcname: aop
-#+begin_src clojure :tangle no :exports code
-(declare collect-bodies)
 
-(defmacro contract [name & forms]
-  (list* 'fn name (collect-bodies forms)))
-
-(declare build-contract)
-
-(defn collect-bodies [forms]
-  (for [form (partition 3 forms)])
-  (build-contract form))
-
-(defn build-contract [c]
-  (let [args (first c)]
-    (list
-     (into '[f] args)
-     (apply merge
-            (for [con (rest c)]
-              (cond (= (first con) :require)
-                    (assoc {} :pre (vec (rest con)))
-                    (= (first con) :ensure)
-                    (assoc {} :post (vec (rest con)))
-                    :else (throw (Exception. (str "Unknown tag " (first con)))))))
-     (list* 'f args))))
-#+end_src
-#+latex: \end{listing}
-
-Listing \ref{lst:joy} defines =contract= which is used to populate the
-pre and post conditions of a =fn=.  Wrapping this in a call to =def=
-reproduces the functionality of =defn= as described in section
-\ref{defn} above.  This allows us to define contracts and then
-associate them with a function.  For example a doubler-contract which
-requires a function to double the value of its argument can be
-associated with a function =times2= which does just that:
-
-** TODO tangle this too
-#+latex: \begin{listing}[H]
-#+latex: \caption{Composition of contract function and constrained function} \label{lst:joy2}
-#+srcname: aop
-#+begin_src clojure :tangle no :exports code
-(def doubler-contract
-  (contract doubler [x]
-            (:require (pos? x))
-            (:ensure (= (* 2 x) %))))
-
-(def times2 (partial doubler-contract #(* 2 %)))
-#+end_src
-#+latex: \end{listing}
-
-
-
-
-Unfortunately here we come across a problem.  For a first order
-contract, the contract term can simply verify the pre conditions of the
-function and pass the now checked value through to the original
-function.  With a high order contract, the contract cannot be fully
-verified before the function is executed in place.  As in Listing
-\ref{lst:joy} we do not have access to the original function body, we
-cannot replace the parameter usage sites with appropriately wrapped
-versions. Unless we resort to recompiling the target function on the
-fly we are constrained to an intrusive implementation of Design by
-Contract.
 
 ** Blame assignment
 In order to assist the debugging process we wish to able locate the
@@ -1682,24 +1620,11 @@ return values, but also enforcement of that expectation.
 
 
 
-TODO hanging words
-
-We will then provide a series of device specific functions to
-request an endpoint to make a call setup attempt. These will use
-simple first order contracts to check their pre and post conditions:
-have they been given a valid endpoint address and a valid SIP URI, are
-they returning an agreed value.
-
-Another suite of device specific functions will query the endpoint as
-to whether or not it is actually in a call: not all call setups are
-answered.
-
-
 Looking first at the call setup request: we want to request a
 particular endpoint, identified by IP address, to call a particular
 destination as identified by a SIP URI; something that looks like an
 email address and performs a similar identifying role in video
-communications.  Call set up request are not the same as successful
+communications.  Call set up requests are not the same as successful
 call establishment.  At the end of the request we know whether or not
 the endpoint will honour the set up attempt, but not whether or not it
 will be successful.  The request function can therefore signal whether
@@ -1721,15 +1646,16 @@ the validity of the contract.
 #+begin_src clojure :tangle yes :exports code
 (import sun.net.util.IPAddressUtil)
 (defn ip-address? [s]
-  "True if s is a plausible string representation of an IPv4 address"
+  "True if s is a plausible string representation of an
+  IPv4 address"
   (and
    (string? s)
    (IPAddressUtil/isIPv4LiteralAddress s))) 
 
 (defn sip-uri? [s]
-  "True if s is a plausible SIP URI.  This is a very weak implementation, 
-       merely checking for the presence of @, a real version should consider using 
-       javax.sip.address"
+  "True if s is a plausible SIP URI.  This is a very weak
+  implementation, merely checking for the presence of @, a
+  real version should consider using javax.sip.address"
   (and
    (string? s)
    (substring? "@" s)))
@@ -1742,11 +1668,18 @@ the validity of the contract.
 #+end_src
 #+latex: \end{listing}
 
-We now provide the abstract call setup request function.  All of the
-abstract functions will take the endpoint type as their first
-argument.  This will be used to discover the appropriate function in a
-global map of setup request implementations indexed by type.  Th
-author of a plugin will be required to register his function in that map. 
+
+
+
+
+We now need to provide the abstract call setup request function. Two
+possible implementations come to mind: either take a map of endpoints
+and setup functions as an arguments, or refer to a global value. In
+keeping with Clojure's functional nature we choose the former. Our
+abstract functions, of which =call-setup-request= is the first, will
+therefore take a map of ={type, function} and an the endpoint type as
+their first arguments.  The author of a plugin will be required to
+register his function in that map, using our registration function.
 
 #+latex: \begin{listing}[H]
 #+latex: \caption{} 
@@ -1762,19 +1695,8 @@ author of a plugin will be required to register his function in that map.
     (plugin-fn endpoint uri)))
 #+end_src
 #+latex: \end{listing}
+TODO Fully functional call-setup-request
 
-
-TODO ensure this is in outline on clojure
-
-A brief recap on Clojure's approach to concurrency and mutable data:
-most objects within Clojure are immutable, mutabilty must be
-explicit.  The call to =(ref {})= in =def-concrete-setup-request=
-establishes a named mutable reference to an, initially empty, map.
-=add-setup-request-impl= provides a means of updating that map,
-=dosync= provides a transaction within which =alter= invokes =conj=
-on =concrete-setup-request=, appending the map ={type fn-impl}=.  Within
-=call-setup-request= we access the current value of
-concrete-setup-request via the invocation of =deref=.
 
 At this point we have no control over the implementation of the
 functions stored in =concrete-setup-request= beyond the moral pressure
@@ -1786,29 +1708,38 @@ that the =type= argument will be invoked as a function call on a map.
 This usage is satisfied by either a function or a keyword.  Though we
 expect a keyword to be used, unnecessary restrictions are to be
 avoided so we endeavour to include both possibilities.  The =fn=
-parameter should take two arguments: a IPv4 address and a SIP URI.
-We have already considered predicates for the ranges of those two
-arguments but are in danger of missing the assumption on the arity
-=fn=.  Functions declared through use of the =defn= macro contain a
+parameter should take two arguments: a IPv4 address and a SIP URI.  We
+have already considered predicates for the ranges of those two
+arguments but are in danger of missing an assumption on the arity
+=fn=.  Determining the arity of a function in Clojure is not easy.
+Whilst functions declared through use of the =defn= macro contain a
 metadata item =:arglists= which, as implied by the name, provides a
-list of the arguments to the function.  This does not provide a
+list of the arguments to the function, this does not provide a
 universal solution as lambda functions, defined with =fn=, do not
 contain this meta-data item.  We will therefore have to ignore the
 arity of =fn-impl=, relying on a run time exception being thrown
 should it not match the two argument requirement.
 
-We therefore define a contractual version of =add-setup-request-impl=
-conventionally named =add-setup-request-impl-c=.  We have restricted
-access to the non contractual version by declaring it private to our
-name space through the use of =defn-= rather than =defn=.  It should
-be noted that this provides protection against inadvertent rather than
-malicious invocation.
+We therefore define a contractual version of =assoc=,
+=add-setup-request-impl-c=.  It is interesting to note that, because
+of our modular approach to adding contracts to functions, we can apply
+contracts to =assoc=, a pre-existing part of the Clojure core library.
+A possible disadvantage is that, as we are dealing with a standard
+Clojure data type, a map, it would be easy for a developer to
+inadvertently bypass our contract wrapping functions and call =assoc=
+directly.  Perhaps it would be beneficial to add meta data to the map
+entries, marking them as contracted, and checking for the presence of
+that meta data in the invocation.  If this is done it will require
+malice, rather than mistake, to bypass the contract checks.
 
-=add-setup-request-impl= takes two arguments.  We wish to place a
-contract of =callable?= on the first; the parameter must form part of
-a valid sexpr when appearing as the first element of a list.  The
-second argument must be a function, of assumed arity 2, taking both
-an IPv4 address and a SIP URI, returning a =code-setup-request-result=.
+
+=add-setup-request-impl-c= takes three arguments.  The map, the key
+into the map of call setup functions, and the setup function
+implementation.  We wish to place a contract of =callable?= on the
+second; the parameter must form part of a valid sexpr when appearing as
+the first element of a list.  The third argument must be a function,
+of assumed arity 2, taking both an IPv4 address and a SIP URI,
+returning a =code-setup-request-result=.
 
 #+latex: \begin{listing}[H]
 #+latex: \caption{} 
@@ -1819,21 +1750,35 @@ an IPv4 address and a SIP URI, returning a =code-setup-request-result=.
    (function? f)))
 
 
-(def setup-request-contract (make-contract-1 [ip-address? sip-uri?] call-setup-request-result?))
+(def setup-request-contract
+  (make-contract-1
+   [ip-address? sip-uri?]
+   call-setup-request-result?))
 
 (attach-contracts add-setup-request-impl-c 
                   add-setup-request-impl
                   [[callable?] setup-request-contract])
 
+#+End_src
+#+latex: \end{listing}
 
 
+We can now consider concrete implementations of setup functions.
+=hdx-setup= represents a device specific call set up function; in
+this case intended to support Polycom's HDX series of endpoints.
+=faulty-setup-request= represents a programmer failing to comply with
+the specified contract on setup function implementations.
+
+#+latex: \begin{listing}[H]
+#+latex: \caption{} 
+#+begin_src clojure :tangle yes :exports code
 
 (defn hdx-setup [ip-address uri]
   ;; Product specific code omitted
   :ok)
 
-(defn faulty-return-value [ip-address uri]
-  ;; Product specific code omitted
+(defn faulty-setup-request [ip-address uri]
+  ;; An incorrectly implemented version, returning an invalid value
   0)
 
 (deftest setup-request-test
@@ -1843,13 +1788,20 @@ an IPv4 address and a SIP URI, returning a =code-setup-request-result=.
   (is (thrown-with-msg? java.lang.Exception #"Pre"
         (call-setup-request :hdx "192.168.10.1" "invalid-uri")))
   (is (= :ok
-         (call-setup-request :hdx "192.168.10.1" "me@example.com" ))))
+         (call-setup-request :hdx "192.168.10.1" "me@example.com" )))
+  (add-setup-request-impl-c :faulty faulty-setup-request)
+  (is (thrown-with-msg? java.lang.Exception #"Post"
+        (call-setup-request :faulty "192.168.10.1" "me@example.com"))))
 
 
-#+end_src
+#+End_src
 #+latex: \end{listing}
 
-
+As can be seen from the test suite, should the concrete implementation
+be invoked with invalid arguments, a pre condition violation is
+indicated, exonerating the plugin developer.  In the case of
+=faulty-setup-request=, a post condition is indicated, blaming teh
+developer of the plugin for the error.
 
 
 
@@ -1884,7 +1836,7 @@ This takes the two device specific functions as arguments.
 
 #+END_SRC    
  
-We wish to allow teh independent development of support for new
+We wish to allow the independent development of support for new
 endpoint types, but also need to ensure that the interface software
 developed for those new endpoints conforms to the needs of our test
 harness.  Whilst specifying the requirements in the test harness
@@ -1913,7 +1865,7 @@ Clojure, I came up with the monolithic solution presented in Listing
 As the dissertation progressed my familiarity with the language, and
 in particular macros, increased.  Prompted by a question from my
 tutor, Dr Hinze, I revisited the modular solution and this time was
-able to achieve a satisfactory solution --- the =attach-contracts=
+able to achieve a more satisfactory solution --- the =attach-contracts=
 macro of Listing \ref{ }.  So why did I initially go down a blind
 alley; more importantly is that reason relevant to the rest of my
 programming? 
