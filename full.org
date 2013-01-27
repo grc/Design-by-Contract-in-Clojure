@@ -47,7 +47,7 @@
   export BIBINPUTS
 #+end_src
 
-
+TODO MOve doc strings to *before* arg list
 
 \begin{abstract}
 What hath I wrought?
@@ -1414,13 +1414,85 @@ the delayed contract checking of high order functions, we don't know
 at the time we apply a contract whether or not that contract will be
 fulfilled and hence whether or not the stack trace will be needed.
 Accordingly we must generate a stack trace for every contract
-application: a potentially expensive process.  An approach to
-mitigating the impact of this is described in \ref{meta}.
+application: a potentially expensive process.  
+
+An alternative would be to modify our function definitions so that
+they automatically maintain a call stack, pushing themselves on when
+the function is entered, popping off on function exit.  The problem
+is that we wish to add stack trace ability to all (or at least most)
+functions, not just those we have written to enforce contracts.  
+
+
+Although Clojure does not directly provide support for Aspect
+Oriented Programming, the ability to rebind vars allows us to build 
+similar functionality.  Inspired by an example of adding trace code
+\cite{http://stackoverflow.com/questions/3346382/clojure-adding-a-debug-trace-to-every-function-in-a-namespace},
+we can query a namspace for all its functions and then rebind those
+to a version which maintains a call stack and calls the original version.
+
+#+begin_src clojure :exports code
+(def *call-stack* (var ()))
+
+(defn callstack-ns
+  "ns should be a namespace object or a symbol."
+  [ns]
+  (doseq [s (keys (ns-interns ns))
+          :let [v (ns-resolve ns s)]]
+    (intern ns
+            s
+            (let [f (deref v)] (fn [& args]
+                                 (binding [*call-stack* (cons s *call-stack*)]
+                                   (apply f args)))))))
+
+#+end_src
+
+=doseq= is intended for side effects.  It repeatedly executes its body
+for a filtered list of its arguments.  In this case we call it for all
+functions defined in the given namespace. The body of the =doseq=
+replaces the original function with one which places its name on the
+call stack and then calls the original function.  On exiting the
+scope of =binding=, the dynamic scoped variable =*call-stack*=
+reverts to its previous value.  Thus we maintain a call stack for the
+current thread.
 
 ** Contract Documentation
 \label{selfdocumenting}
 To be completed - brief description of contracts as meta data to
 function, functions to print that meta data
+
+As with the original definition of Design by Contract \cite[p.\ 389]{oosc}, we
+wish to ensure that our contract observing functions are self
+documenting.  Eiffel provides a short form documentation tool which
+includes contract information.  Clojure has the =doc= function which
+will print the documentation meta data associated with a function.
+We will provide a simple =contract= function which will print
+=:contract= meta data.
+
+#+begin_src clojure :exports code
+(defn contracts [f]
+    (println " " (:contract (meta f))))
+#+end_src
+
+We now have to store some useful information in the =:contract= meta
+data.  Requesting a developer to perform additional documentation
+tasks is typically an unrewarding activity so we make use of the
+contract definitions passed in to the call =attach-contracts= and
+simply store these in string form as function meta data.  To do this
+we use the reader meta data macro =#^=.
+
+#+begin_src clojure :exports code
+(defmacro attach-contracts-x [newname func contracts]
+  "Create a new function definition `newname' which calls
+  `func' with the args stored in arg/contracts wrapped in
+   the corresponding contract."
+  (let [args (vec (map gensym  (range (count contracts))))]
+    `(defn ^#{:contracts ~contracts} 
+       ~newname ~args
+       (let [wrapped-args# 
+             (map wrap-arg-contract (zip ~args ~contracts))]
+         (apply ~func wrapped-args# )))))
+#+end_src
+
 
 ** Meta Framework
 
@@ -1855,43 +1927,105 @@ contracts to functions; the monolithic and modular approaches of
 \ref{codegen} arose through my initial unfamiliarity with the
 language.  My first attempts at writing a macro to wrap function
 arguments failed with a number of errors related to symbol resolution
-and inadvertent variable capture or anaphora.  Rather than stepping
-back and finding a simpler approach I began trying to resolve each
-immediate error and soon became enmeshed in a hopelessly complicated
-code.  Deciding that a modular solution could not be produced in
-Clojure, I came up with the monolithic solution presented in Listing
-\ref{}.
+and inadvertent variable capture or anaphora.  I had not fully
+appreciated that in moving to Clojure I had not just to pick up a new
+language syntax, but also a new development paradigm.  The majority of
+my previous development work has been in C++ so the change to dynamic
+typing was new.  I was in danger of adding multiple type checking
+assertions to function arguments, going against the grain of Clojure
+development. Rather than stepping back and finding a simpler approach
+I began trying to resolve each immediate error and soon became
+enmeshed in a hopelessly complicated code.  Deciding that a modular
+solution could not be produced in Clojure, I came up with the
+monolithic solution presented in Listing \ref{}.
 
 As the dissertation progressed my familiarity with the language, and
 in particular macros, increased.  Prompted by a question from my
 tutor, Dr Hinze, I revisited the modular solution and this time was
 able to achieve a more satisfactory solution --- the =attach-contracts=
-macro of Listing \ref{ }.  So why did I initially go down a blind
-alley; more importantly is that reason relevant to the rest of my
-programming? 
+macro of Listing \ref{ }. 
+
+The worked example of section \ref{} provided a number of insights
+into the modular framework.  It was very satisfying to be able to
+attach contracts to normal Clojure functions as in the use of
+=assoc== in Listing \ref{}.  The ability to apply Design by Contract
+retrospectively to existing functions vastly increases the attraction
+of such a framework.  If every  function had to be written with
+contracts in mind, as in the initial monolithic framework, the
+housekeeping overhead would be unacceptable.
+
+Less satisfying is the fragility of the interface to
+=attach-contracts=.  I found myself frequently having to revisit code
+I had written using this function in order to correct the contract
+parameter list: proof that the current design is not intuitive.  More
+concerning, an inadvertent use of a ='= character in \ref{}:
+
+=(add-setup-request-impl-c :hdx 'hdx-setup)=
+
+instead of
+
+=(add-setup-request-impl-c :hdx hdx-setup)=
+
+proved a frustrating bug to track down: calls to =call-setup-request=
+were simply returning the last argument passed in.  The problem was
+eventually tracked down to the expansion in =ho-wrap= to 
+=('hdx-setup arg1 arg2)= rather than =(hdx-setup arg1 arg2)=.  The
+quote prevents the evaluation of =hdx-setup=, hence it is not invoked
+as a function.  The return value of such a form is simply the last
+element: =arg2=, hence my bug.  Having discovered this I was tempted
+to add a number of assertions checking the arguments passed in to
+=ho-wrap= but having already been burnt by going against the grain of
+the language I have resisted this. I believe the idiomatic solution
+to this is the use of unit tests, which initially demonstrated the
+problem, and a better knowledge of the language to make root cause
+determination quicker.  Coming from a background of static typed
+languages, this still feels somewhat fragile.
 
 
-** Meta programming
+\cite{Hinze}[section ?] provides
+the following table to indicate where contracts fit naturally into the
+checking spectrum.
 
-TODO discuss 
+|                    | static checking      | dynamic checking      |
+|--------------------+----------------------+-----------------------|
+| simple properties  | static type checking | dynamic type checking |
+| complex properties | theorem proving      | contract checking     |
 
-- problems with initial monolithic wrap implementation
+This is in accordance with my findings. A lot of the first order
+contracts I have implemented have been simple type and range checks,
+something which could be under taken by a suitable static type
+system.  The checks on higher order functions were not so amenable to
+static checking.
+ 
 
-- symbols, anaphora intoduced by =~'foo=
 
-** DBC authenticity
-TODO Move thsi in to impl body
 
-Many Design by Contract frameworks provide contract enforcement only
-at the boundaries of a module.  Our implementation does not
-inherently provide that but by defining non-contractual functions as
-private to a name space and their contractual versions as public a
-similar effect may be achieved.  Whilst privacy enforcement is not
-possible in Clojure
-\cite(http://christophermaier.name/blog/2011/04/30/not-so-private-clojure-functions),
-the idiom of hiding non-contractual functions could be strengthened
-through a check that the implementing function passed to
-=attach-contracts= is indeed private.
+** Comparison with other Design by Contract frameworks
+
+
+Many Design by Contract frameworks \cite{racket}, \cite{eiffel}
+provide contract enforcement only at the boundaries of a module.  
+
+If we consider Racket, a member of the Scheme/Lisp family, it features
+a sophisticated and modular contract mechanism. This is unsurprising
+as it comes from the authors of \cite{hof}. Examining their contract
+implementation \cite{racket-src} we see that it makes heavy use of
+make-provide syntax transformers \cite{racket-doc-transform}. These
+are run when a module is loaded and allow the transformation of forms
+within the provide expression. This low level language implementation
+allows Racket to follow Eiffel and implement contract verification
+only at module boundaries. Ignoring arguments about run time speed,
+the ability for a call within a module to violate a contract can be
+useful, particularly where invariants are concerned.
+
+Replicating the sophisticated Racket macro system in Clojure is beyond
+the scope of this dissertation.  Our approach to enforcing contracts
+only at module boundaries is based on Clojure's concept of private functions.
+By defining non-contractual functions as private to a name space and
+their contractual versions as public a similar effect may be achieved.
+Whilst privacy enforcement is not possible in Clojure
+\cite{http://christophermaier.name/blog/2011/04/30/not-so-private-clojure-functions},
+this provides a modicum of protection against mistaken usage.
 
 
 ** The current state of Design by Contract 
