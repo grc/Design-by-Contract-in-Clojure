@@ -65,7 +65,45 @@ stated.
 \pagebreak
 * Introduction
 
-To Be Completed
+Writing a correctly functioning computer program is hard.  A number
+of tools and techniques have evolved which help the programmer
+maintain a degree of control over the burgeoning complexity of the
+system he is developing.  In response, the systems we are trying to
+build have become still more complicated.
+
+One are of increasing complexity is the growth of parallelism in many
+modern systems.  This is encouraged by the fact that CPU's are no
+longer in a race for the highest clock frequency but the highest core
+count.  Intel's  next generation Boxboro  chip provides 20 concurrent
+threads of execution.
+\cite{http://www.intel.co.uk/content/www/us/en/processors/public-roadmap-article.html}.
+For a single program to take advantage of this power it must be able
+to operate in parallel.  But writing correct parallel programs is
+hard.
+
+Functional programming provides one approach to reducing the
+difficulty parallel programming.  As a pure functional program has no side
+effects evaluation order is unimportant: functions may be run on any
+processor core with impunity.  Although many real world programs
+require some side effects to be useful, these can be managed at well
+defined points in the program helping to reduce race conditions.
+
+Another tool to manage program complexity is the assertion: a
+statement in the program about the assumed state at that point.
+Should the assertion be incorrect, the program is typically
+terminated.  Assertions were taken further by Meyer's ideas of Deign
+by Contract \cite{oosc}, where state is explicitly checked both
+before and after a method call.
+
+Most work on Design by Contract has been based around Object Oriented
+Programming.  Design by Contract in a functional world brings new
+challenges as it is now necessary to deal with functions as first
+class objects and reason about their state in addition to assertions
+about simple data types.
+
+This dissertation seeks to take some of the work on Design by
+Contract in a functional world and apply that to Clojure, a
+relatively new functional language in the Lisp family.
 
 
 * A background to Design by Contract
@@ -2000,6 +2038,48 @@ static checking.
 
 
 
+** Design by Contract and Test Driven Development
+
+There is fair degree of overlap between the role of assertions and
+Unit Tests.  This has led to some advocates of Agile Development
+methodologies \cite{c2dbc} arguing that assertions are not useful as their role
+is subsumed by the presence of Unit Tests.  As Design by Contract is
+built upon the use of assertions, this would argue that Design by
+Contracts is also not useful.  
+
+A key difference between the role of the two is that assertions are
+declarative, stating how the world should be; whilst unit tests are
+imperative, describing what should happen when a particular stimulus
+is given.  Assertions therefore provide a wide description of the
+desired state, but - in the absence of static checking - this
+description is only compared with the actuality when code is
+executed.  Whilst this could be in production use on a customer's
+site it is surely better under controlled conditions in the
+development team. Unit testing provides a complementary role,
+with the tests describing the conditions under which the system is
+known to function correctly.  In this case "function correctly" may
+be defined as "function in accordance with its contracts".
+
+One of the key aspects of Design by Contract is described in the
+first word: "Design".  In specifying a contract for a function it is
+necessary to think deeply about the requirements of the specification
+of the function and try to separate those from artefacts of its
+implementation.  It is this specification which should then be
+captured in the contract.  Unit testing has an analogous thought
+process in Test Driven Development
+(TDD)\cite{tdd}. When practising
+TDD the unit tests are written before the implementation code.  This
+change in ordering from the more traditional "design, code, test"
+waterfall highlights the question of how the function will be invoked
+before considering concerns of how to implement it.  A good unit test
+also investigate the functions behaviour for various edge conditions
+but, by its imperative nature, is unlikely to be exhaustive for all
+but the most trivial functions.
+
+Design by Contract and Test Driven Development provide two
+complementary approaches to improving the quality of software.
+
+
 ** Comparison with other Design by Contract frameworks
 
 
@@ -2020,12 +2100,14 @@ useful, particularly where invariants are concerned.
 
 Replicating the sophisticated Racket macro system in Clojure is beyond
 the scope of this dissertation.  Our approach to enforcing contracts
-only at module boundaries is based on Clojure's concept of private functions.
-By defining non-contractual functions as private to a name space and
-their contractual versions as public a similar effect may be achieved.
-Whilst privacy enforcement is not possible in Clojure
-\cite{http://christophermaier.name/blog/2011/04/30/not-so-private-clojure-functions},
-this provides a modicum of protection against mistaken usage.
+only at module boundaries is based on Clojure's concept of private
+functions.  By defining non-contractual functions as private to a name
+space and their contractual versions as public a similar effect may be
+achieved.  Whilst privacy enforcement is not possible in Clojure
+\cite{maier}, this provides a modicum of protection against mistaken
+usage.
+
+
 
 
 ** The current state of Design by Contract 
