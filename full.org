@@ -65,28 +65,29 @@ stated.
 \pagebreak
 * Introduction
 
-Writing a correctly functioning computer program is hard.  A number
-of tools and techniques have evolved which help the programmer
-maintain a degree of control over the burgeoning complexity of the
-system he is developing.  In response, the systems we are trying to
-build have become still more complicated.
+Writing a correctly functioning computer program is hard.  And it's
+not going to get easier.  In a programmer's arms race a number of
+tools and techniques have evolved which help maintain a degree of
+control over the burgeoning complexity of the systems we are creating.
+In response, the systems we are trying to build have become still more
+complicated: all the easy problems have been solved.
 
-One are of increasing complexity is the growth of parallelism in many
+One area of increasing complexity is the growth of parallelism in many
 modern systems.  This is encouraged by the fact that CPU's are no
 longer in a race for the highest clock frequency but the highest core
-count.  Intel's  next generation Boxboro  chip provides 20 concurrent
-threads of execution.
-\cite{http://www.intel.co.uk/content/www/us/en/processors/public-roadmap-article.html}.
-For a single program to take advantage of this power it must be able
-to operate in parallel.  But writing correct parallel programs is
-hard.
+count.  Intel's next generation of chips provide up to 20 concurrent
+threads of execution.  \cite{intel}.  For a single program to take
+advantage of this power it must be able to operate in parallel.  But
+writing correct parallel programs is hard.
 
 Functional programming provides one approach to reducing the
-difficulty parallel programming.  As a pure functional program has no side
+difficulty of parallel programming.  As a pure functional program has no side
 effects evaluation order is unimportant: functions may be run on any
 processor core with impunity.  Although many real world programs
 require some side effects to be useful, these can be managed at well
-defined points in the program helping to reduce race conditions.
+defined points in the program helping to reduce race conditions.  
+
+
 
 Another tool to manage program complexity is the assertion: a
 statement in the program about the assumed state at that point.
@@ -101,9 +102,12 @@ challenges as it is now necessary to deal with functions as first
 class objects and reason about their state in addition to assertions
 about simple data types.
 
-This dissertation seeks to take some of the work on Design by
-Contract in a functional world and apply that to Clojure, a
-relatively new functional language in the Lisp family.
+In this dissertation we take some of the work on Design by Contract in
+a functional world and use that to develop a Design by Contract
+framework for Clojure.  Clojure is a relatively recent addition to the
+set of functional languages.  A member of the Lisp family of
+languages, it is based on the Java Virtual Machine and so can take
+advantage of the plethora of Java libraries.
 
 
 * A background to Design by Contract
@@ -683,6 +687,10 @@ different usages is also desirable.
 
 * A Clojure implementation
 
+In this section we will be implementing a Design by Contract
+framework that supports functional programming.  Two implementations
+will be shown and their merits compared.
+
 ** Terminology
 
 In the following section we develop a Clojure implementation of a
@@ -729,13 +737,9 @@ emitted with the culprit identified appropriately.
 
 
 
-(declare make-contract-1 dom rng flat?)
+(declare make-contract-1 dom rng flat? lenient strict pred contract-error)
 
-(defn lenient [_]
-  true)
 
-(defn strict [_]
-  false)
 
 
 
@@ -751,20 +755,19 @@ emitted with the culprit identified appropriately.
 
 
 
-(defn pred [contract value]
-  "CONTRACT must be a function which accepts a single value to check."
-  (contract value))
-
 
 
 (declare fo-wrap ho-wrap-1)
 
-                                        ; TODO look at using clojure-contrib.condition/raise here
-(defn    contract-error [position]
-  (throw (Exception. (str "Contract failed: " position))))
+                                       
 
 
 #+end_src
+
+
+
+
+
 
 #     Mutual recursion, as in ho-warp and wrap, probably ought to
 #     use trampolining:
@@ -782,7 +785,7 @@ emitted with the culprit identified appropriately.
     (ho-wrap-1 contract value p n)))
 
 (defn fo-wrap  [contract value p n]
-  (if (pred contract value)
+  (if (contract value)
     value
     (contract-error p)))
 
@@ -793,6 +796,13 @@ emitted with the culprit identified appropriately.
                   (x (wrap d y n p))
                   p
                   n))))
+
+(defn contract-error
+  "Signals a contract failure at `position'"
+  [position]
+  (throw (Exception. (str "Contract failed: " position))))
+
+
 #+end_src
 #+latex: \end{listing}
 
@@ -835,6 +845,20 @@ failure.
 (defn flat? [x]
   (not (map? x)))
 #+end_src
+
+We also find it convenient to introduce two simple predicates for
+testing purposes: =lenient= and =strict=.  The first will allow any
+value whilst the second will deny any value.
+
+
+#+begin_src clojure :tangle yes :exports code
+(defn lenient [_]
+  true)
+
+(defn strict [_]
+  false)
+#+end_src
+
 
 To examine how this works we look first at an Eiffel style first order
 contract. We define a faulty single parameter function which requires
@@ -958,7 +982,7 @@ examine a second, superior, version where existing functions may have
 contracts attached to them, without requiring access to the function body.
 
 
-*** Monolithic approach
+*** A monolithic approach
 
 Inspired by an intent to emulate the function definition macro =defn=,
 with support for contracts on higher order functions, we construct a
@@ -1065,7 +1089,7 @@ Using this macro we can simplify the definitions of =ff-use= and
 #+end_src
 
 
-**** A modular approach
+*** A modular approach
 The macro defined in Figure \ref{defcontract1} successfully automates
 the process of wrapping function parameters in contract checking
 code. Unfortunately the resulting code is monolithic; conflating
@@ -1348,7 +1372,8 @@ which obeys =two-arg-contract=:
 
 (deftest two-by-two-test
   (is (= 3 (two-by-two-c 0 +)))
-  (is (thrown-with-msg? java.lang.Exception #"Post" (two-by-two-c 0 -))))
+  (is (thrown-with-msg? java.lang.Exception #"Post"
+        (two-by-two-c 0 -))))
 
 #+END_SRC
 
@@ -1464,10 +1489,12 @@ functions, not just those we have written to enforce contracts.
 Although Clojure does not directly provide support for Aspect
 Oriented Programming, the ability to rebind vars allows us to build 
 similar functionality.  Inspired by an example of adding trace code
-\cite{http://stackoverflow.com/questions/3346382/clojure-adding-a-debug-trace-to-every-function-in-a-namespace},
+\cite{trace},
 we can query a namspace for all its functions and then rebind those
 to a version which maintains a call stack and calls the original version.
 
+#+latex: \begin{listing}[H]
+#+latex: \caption{Call stack} \label{callstack}
 #+begin_src clojure :exports code
 (def *call-stack* (var ()))
 
@@ -1478,12 +1505,13 @@ to a version which maintains a call stack and calls the original version.
           :let [v (ns-resolve ns s)]]
     (intern ns
             s
-            (let [f (deref v)] (fn [& args]
-                                 (binding [*call-stack* (cons s *call-stack*)]
-                                   (apply f args)))))))
+            (let [f (deref v)]
+              (fn [& args]
+                (binding [*call-stack* (cons s *call-stack*)]
+                  (apply f args)))))))
 
 #+end_src
-
+#+latex: \end{listing}
 =doseq= is intended for side effects.  It repeatedly executes its body
 for a filtered list of its arguments.  In this case we call it for all
 functions defined in the given namespace. The body of the =doseq=
@@ -1894,14 +1922,24 @@ the specified contract on setup function implementations.
 (deftest setup-request-test
   (add-setup-request-impl-c :hdx hdx-setup)
   (is (thrown-with-msg? java.lang.Exception #"Pre"
-        (call-setup-request :hdx "invalid-address" "me@example.com")))
+        (call-setup-request :hdx
+                            "invalid-address"
+                            "me@example.com")))
+  
   (is (thrown-with-msg? java.lang.Exception #"Pre"
-        (call-setup-request :hdx "192.168.10.1" "invalid-uri")))
+        (call-setup-request :hdx
+                            "192.168.10.1"
+                            "invalid-uri")))
   (is (= :ok
-         (call-setup-request :hdx "192.168.10.1" "me@example.com" )))
+         (call-setup-request :hdx
+                             "192.168.10.1"
+                             "me@example.com" )))
+  
   (add-setup-request-impl-c :faulty faulty-setup-request)
   (is (thrown-with-msg? java.lang.Exception #"Post"
-        (call-setup-request :faulty "192.168.10.1" "me@example.com"))))
+        (call-setup-request :faulty
+                            "192.168.10.1"
+                            "me@example.com"))))
 
 
 #+End_src
@@ -1933,14 +1971,18 @@ This takes the two device specific functions as arguments.
 
 
 
-(defn call-setup-hdx [endpoint-ip alias]
-  "Place a call setup attempt from the HDX at `endpoint-ip' to the SIP URI `alias'"
+(defn call-setup-hdx
+  "Place a call setup attempt from the HDX at
+   `endpoint-ip' to the SIP URI `alias'"
+   [endpoint-ip alias]
   ;; code omitted
   )
 
 
-(defn call-established-hdx? [endpoint-ip timeout]
-  "Waits up to `timeout' to see if the HDX endpoint at `endpoint-ip' is in a call"
+(defn call-established-hdx? 
+  "Waits up to `timeout' to see if the HDX endpoint
+  at `endpoint-ip' is in a call"
+  [endpoint-ip timeout]
   ;; code omitted
   )
 
@@ -2026,7 +2068,7 @@ checking spectrum.
 
 |                    | static checking      | dynamic checking      |
 |--------------------+----------------------+-----------------------|
-| simple properties  | static type checking | dynamic type checking |
+| simple properties  | staTodd type checking | dynamic type checking |
 | complex properties | theorem proving      | contract checking     |
 
 This is in accordance with my findings. A lot of the first order
