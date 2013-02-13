@@ -66,7 +66,7 @@ stated.
 * Introduction
 
 Writing a correctly functioning computer program is hard.  And it's
-not going to get easier.  In a programmer's arms race a number of
+not going to get easier.  In a programmers' arms race a number of
 tools and techniques have evolved which help maintain a degree of
 control over the burgeoning complexity of the systems we are creating.
 In response, the systems we are trying to build have become still more
@@ -76,7 +76,7 @@ One area of increasing complexity is the growth of parallelism in many
 modern systems.  This is encouraged by the fact that CPU's are no
 longer in a race for the highest clock frequency but the highest core
 count.  Intel's next generation of chips provide up to 20 concurrent
-threads of execution.  \cite{intel}.  For a single program to take
+threads of execution \cite{intel}.  For a single program to take
 advantage of this power it must be able to operate in parallel.  But
 writing correct parallel programs is hard.
 
@@ -92,7 +92,7 @@ defined points in the program helping to reduce race conditions.
 Another tool to manage program complexity is the assertion: a
 statement in the program about the assumed state at that point.
 Should the assertion be incorrect, the program is typically
-terminated.  Assertions were taken further by Meyer's ideas of Deign
+terminated.  Assertions were taken further by Meyer's ideas of Design
 by Contract \cite{oosc}, where state is explicitly checked both
 before and after a method call.
 
@@ -109,6 +109,16 @@ set of functional languages.  A member of the Lisp family of
 languages, it is based on the Java Virtual Machine and so can take
 advantage of the plethora of Java libraries.
 
+In this dissertation we first review the background to Design by
+Contract, its inception, current implementations and extension in to
+the world of functional programming.  Having outlined design goals for
+our framework we will look in some detail at two possible framework
+implementations and compare their benefits.  We then study a worked
+example to see how our preferred framework could be used in practice.
+A section on discussion provides us an opportunity to reflect on the
+successes and otherwise of our implementation.  Finally our
+conclusions summarise what we have learnt during this process and
+point at possible future areas for study.
 
 * A background to Design by Contract
 
@@ -207,7 +217,7 @@ implementation.
 
 ** Microsoft CLR
 
-An interesting devlopment over the last few years has been the rise of
+An interesting development over the last few years has been the rise of
 the virtual machine as a platform on which to build programming
 languages.  Arguably the two dominant players are Microsoft's Common
 Language Runtime (CLR) and the Java Virtual Machine (JVM).
@@ -227,7 +237,7 @@ possible to simply examine the arguments to a function at call time to
 know if they satisfy the pre condition.
 
 
-Although the absence of high order contracts has been noted by the
+Although the absence of higher order contracts has been noted by the
 functional community, it is also of significance in the procedural and
 object oriented communities.  Even in C, function pointers can be
 passed so it could be advantageous to attach a contract to those
@@ -253,20 +263,20 @@ predicates or function contracts.  Function contracts, in turn,
 consist of a pair of contracts [\ldots] one for the domain of the
 function and one for the range of the function."
 It is this recursive approach to contracts which allows the use of
-high order functions --- high order contracts cannot be enforced until
+higher order functions --- higher order contracts cannot be enforced until
 some function consumes or produces only first order values.
 
-Central to their implementation of contracts for high order functions
+Central to their implementation of contracts for higher order functions
 is the meta function, =wrap= which wraps the underlying function
 implementation.  If the contract is a simple predicate, it is
 evaluated. Higher order contracts consist of two terms: a pre- and
 post- condition, each of which in turn may be first or higher order.
-For these high order contracts, =wrap= is recursively applied to the
-high order term.
+For these higher order contracts, =wrap= is recursively applied to the
+higher order term.
 
 \cite{hof} also investigates blame assignment.  Whilst knowing that a
 program is faulty is helpful, knowing where the fault lies is more
-useful.  \{hof} introduces the concept of positive and negative
+useful.  \cite{hof} introduces the concept of positive and negative
 positions in the =wrap= function.  Initially these are applied to
 caller and called function. Should a first order contract fail the
 positive location is blamed.  Higher order contracts have the positive
@@ -274,18 +284,18 @@ and negative locations swapped before the recursive application of
 =wrap=.
 
 
-# High order contracts described in
+# higher order contracts described in
 # file:./papers/contracts-as-projections.pdf
 
 
 Hinze et al.\cite{citeulike:661450} extend the work of Findler and
-Felleisen, introducing a Domain Specific Language (DSL) to support the
+Felleisen, introducing a Domain Specific Language to support the
 description and composition of contracts.  Again a focus of this work
 is on refining the blame assignment in the event of a contract failure.
 Whilst is helpful to know of the existence of a bug in your program,
 knowledge as to where in the program the bug exists is even more
 valuable.  Findler and Felleisen track at most two locations for blame
-assignment. When contracts are being applied to high order functions,
+assignment. When contracts are being applied to higher order functions,
 this necessitates discarding dependent contract location data and
 replacing with the current contract's location data.  Hinze et al.
 provide a pair of stacks of locations.  For a first order function
@@ -321,7 +331,7 @@ outstanding access to libraries and is designed with concurrency in
 mind.
 
 Clojure is a member of the Lisp family of languages whose common
-ancestor was invented by John McCarthy in the late 1950's \cite{}.
+ancestor was invented by John McCarthy in 1958 \cite{lisp}.
 Various flavours of Lisp have hovered around, but never quite broken
 into, the mainstream software development world. Lisps have played a
 significant role in research into areas such as artificial
@@ -339,13 +349,13 @@ or an expression of the form
 \begin{texttt}(x\space.\space{}y)\end{texttt}  
 where =x= and =y= are themselves sexprs.  The notation 
 \begin{texttt}(x\space.\space{}y)\end{texttt}  
-denotes a cons cell, terminology derived from the lisp function used
+denotes a cons cell, terminology derived from the Lisp function used
 to construct it.  It represents an ordered pair of values and is
 typically used to build linked lists.  In such a case the second value
 (known as the =cdr= of the cell) points to the next cons cell.  Proper
 lists are terminated when the =cdr= is nil. Figure \ref{fig:cons}
 shows the construction of a proper list 
-\begin{texttt}((x\space.\space{}y)\space{}nil)\end{texttt} 
+\begin{texttt}((x\space.\space{}y)\space{}.\space{}nil)\end{texttt} 
 
 
 # cons cell diagram
@@ -376,7 +386,7 @@ shows the construction of a proper list
 
 Since lists form the basic building block of the language, and are
 thus very common, a short hand notation is provided. The proper list
-\begin{texttt}((x\space.\space{}y)\space{}nil)\end{texttt} 
+\begin{texttt}((x\space.\space{}y)\space{}.\space{}nil)\end{texttt} 
 is usually represented as 
 \begin{texttt}(x\space{}y)\end{texttt}.
 
@@ -396,12 +406,12 @@ function:
 
 The processing exceptions mentioned above are known as "special
 forms". There are a number of these which do not obey the usual
-processing rules.  Consider For example an =if= statement:
+processing rules.  Consider for example an =if= statement:
 
 #+begin_src clojure
-  (if (< 1 2)                         ; 1
-    (print "Normal maths applies")    ; 2
-    (print "Strange maths applies"))  ; 3
+(if (< 1 2)                         ; 1
+  (print "Normal maths applies")    ; 2
+  (print "Strange maths applies"))  ; 3
 #+end_src
 
 The intent is that, if the test on the first line is true execute line
@@ -409,9 +419,21 @@ The intent is that, if the test on the first line is true execute line
 evaluate all the arguments to =if= before passing them to the form.
 This would result in two, contradictory, messages being printed.  The
 lack of support for lazy evaluation \cite{lazy} in Clojure means that
-we to make =if= an exception to the normal processing rues: a special
+we need to make =if= an exception to the normal processing rules: a special
 form.
 
+One significant special form is =(quote (...))=, usually abbreviated
+to ='(...)=.  A quoted form prevents its argument being evaluated at
+all:
+
+#+begin_src clojure
+'(foo 1 2) ; foo has not been defined
+
+> (foo 1 2)
+#+end_src
+
+
+TODO #' and #" syntax
 
 ** Other data structures
 
@@ -458,22 +480,14 @@ macro system. The full power of the language is available to
 manipulate the data structures that form the program
 text. Unfortunately the use of the name "macro" for this aspect of the
 language can cause confusion with the well known, and usually
-disliked, C macro system.  It is worth emphasising that, whilst C
-macros provide basic textual substitution in a pre-processor, a Lisp
-macro is operating not on the text but on a data structure created
-from the parsed text.  A better comparison would be that Lisp macros
-provide a more powerful, and readable, version of C++ template meta
-programming.
-
-
-TODO This was just dropped in
-
-Lisp's macros should not be considered in the same vein as the C
-family =#define=.  Whilst C's macros use a simple pre processor to
-perform textual substitution, Lisp macros have access to the entire
-Lisp language to perform manipulations.  Macro are run and generate
-code at macro expansion time.  That code and any other regular code is
-then executed at run time.  
+disliked, C =#define= macro system.  It is worth emphasising that,
+whilst C macros provide basic textual substitution in a pre-processor,
+a Lisp macro is operating not on the text but on a data structure
+created from the parsed text.  A better comparison would be that Lisp
+macros provide a more powerful, and readable, version of C++ template
+meta programming.  Macros are run and generate code at macro expansion
+time.  That code and any other regular code is then executed at run
+time.
 
 At their simplest macros make use of the backquote special form.  In a
 similar manner to the =quote= special form, the body of a backquote
@@ -500,7 +514,7 @@ explanation of macros is beyond the scope of this dissertation,
 \cite{Seibel} is recommended as a starting point.
 
 
-The Lisp macro system in turn allows much of Lisp to be written in
+The Lisp macro system  allows much of Lisp to be written in
 terms of itself; there is a very restricted set of special forms which
 provide functionality which cannot be obtained by following the
 standard evaluation rules.  This is the case with Clojure; whilst the
@@ -512,10 +526,12 @@ anonymous functions may be introduced with =fn=.
 (fn [n] (+ 3 n))
 #+end_src
 
-=defn=, \label{defn} the symbol usually used to introduce a named function
-definition, is written in terms of =fn=: =(def name (fn [params* ]
-exprs*))=, where =def= is a special form which defines a symbol, an
-association of a name and a =var=.
+=defn=, \label{defn} the symbol usually used to introduce a named
+function definition, is written in terms of =fn=: =(def name (fn
+[params* ] exprs*))=, where =def= is a special form which defines a
+symbol, an association of a name and a =var=.  There is also a variant
+of =defn=, =defn-= which is used to define functions private to the
+current namespace.
 
 A typical use of =defn= would be:
 
@@ -528,30 +544,47 @@ A typical use of =defn= would be:
   (Math/sqrt n))
 #+end_src
 
+Clojure allows an optional documentation string as the first argument
+following the function name.  This documentation may be accessed as:
+=(doc unchecked-java-sqrt)=.  Clojure development typically takes
+place with access to a REPL - an interactive shell which Reads the
+user's input, Evaluates it, Prints the result and Loops.  This
+interactive, exploratory, approach to software development is typical
+of Lisp development. Programmatic access to documentation is therefore
+very convenient.
+
+
+
 The use of macros to build layers of functionality on top of the core
 implementation, the ability to treat the program as data, makes Lisp
 an attractive language in which to experiment when we wish to modify
 the behaviour of the language itself.
 
-=fn= itself, the core of a function definition, provides support for
-simple condition checking through meta data.   Since Clojure 1.1 =fn= is
-declared \cite{clojure.fn} as:
 
+*** Clojure's built in pre and post conditions
 
-#+begin_src clojure
-(fn name? [params* ] condition-map? exprs*)
-(fn name? ([params* ] condition-map? exprs*)+)
+The usual way of introducing a function into a Clojure environment,
+=defn= is a macro which can accept pre and post conditions..
+#+begin_src clojure :exports none
+(macroexpand '(defn checked-java-sqrt 
+                "Pre Condition checks prior to calling underlying function"
+                [n]
+                {:pre [(number? n) (>= n 0)]}
+                (Math/sqrt n))) 
 #+end_src
 
+Macro expansion, prior to compilation, wraps the body of the =defn= in
+assertions validating the pre and post conditions.  It is this
+augmented body which is compiled to form the function. 
 
-Where the optional =condition-map= parameter may contain keys for pre
-and post conditions associated with a vector of assertion expressions.
-
-
-#+begin_example
-{:pre [pre-expr*]
- :post [post-expr*]}
-#+end_example
+Omitting meta data, macro expansion of =checked-java-sqrt= yields:
+#+begin_src clojure
+(fn* checked-java-sqrt 
+     ([n]
+	(clojure.core/assert (number? n))
+	(clojure.core/assert (>= n 0))
+	(Math/sqrt n)))
+#+end_src
 
 This provides basic condition checking, allowing us to define a new
 version of =java-sqrt=
@@ -594,31 +627,6 @@ Will result in:
 
 
 
-
-*** Clojure's built in pre and post conditions
-
-The usual way of introducing a function into a Clojure environment,
-=defn= is a macro which can accept pre and post conditions..
-#+begin_src clojure :exports none
-(macroexpand '(defn checked-java-sqrt 
-                "Pre Condition checks prior to calling underlying function"
-                [n]
-                {:pre [(number? n) (>= n 0)]}
-                (Math/sqrt n))) 
-#+end_src
-
-Macro expansion, prior to compilation, wraps the body of the =defn= in
-assertions validating the pre and post conditions.  It is this
-augmented body which is compiled to form the function. 
-
-Omitting meta data, macro expansion of =checked-java-sqrt= yields:
-#+begin_src clojure
-(fn* checked-java-sqrt 
-     ([n]
-	(clojure.core/assert (number? n))
-	(clojure.core/assert (>= n 0))
-	(Math/sqrt n)))
-#+end_src
 The demotion of the conditions to generalised assertions loses the
 ability to extract the conditions for use in Eiffel style short form
 descriptions. Pre or post condition violation can be inferred from
@@ -627,6 +635,9 @@ call stack obtained via =getStackTrace= in the case of pre condition
 failure. Though usually robust, it is possible for the JVM to omit
 stack frames in order to optimise execution so a violating caller may
 not appear in the list of blame candidates.
+
+
+
 
 
 *** Mutable data
@@ -663,8 +674,8 @@ wrapped in a transaction and may be protected by a validator function.
 This validator function provides another point at which system
 integrity may be verified.  When the validator is called the nature of
 the transaction is unknown so method pre and post conditions are
-inappropriate but this hood does provide an ideal point for
-maintaining data invariants.
+inappropriate but this does provide an ideal point for maintaining
+data invariants.
 
 * Design goals for a Design by Contract framework
 
@@ -676,7 +687,7 @@ the can only be checked when invoked.
 
 In order to increase the ability to use Design by Contract techniques
 in Clojure, we intend to construct a library which provides support
-for high order contract checking based on the work of \cite{hof}.  The
+for higher order contract checking based on the work of \cite{hof}.  The
 library should be written in terms of Clojure itself and should
 allow us to easily view the contracts pertinent to a function.  The
 ability to adjust the detailed behaviour of the framework to suit
@@ -693,9 +704,9 @@ will be shown and their merits compared.
 
 ** Terminology
 
-In the following section we develop a Clojure implementation of a
+During development of our Clojure implementation of a
 Design by Contract framework.  A number of functions go through an
-evolution as the implementation is refined.  Non-final function
+evolution as the implementation is refined.  Intermediate function
 definitions are named with numeric suffices: =myfunc-1=, =myfunc-2=
 etc., the final form being =myfunc=.  References in the text to the
 entirety of this evolving family of definitions are made as
@@ -704,10 +715,10 @@ entirety of this evolving family of definitions are made as
 ** An initial approach
 
 Our initial implementation is based on that described by Findler and
-Felleisen \{hof}. In Listing \ref{lst:wrap} we define a function, =wrap= which
+Felleisen \cite{hof}. In Listing \ref{lst:wrap} we define a function, =wrap= which
 is used to provide validation of a function parameter.  Should the
 parameter be first-order, =wrap= will trigger an immediate assertion
-check.  High order parameters, i.e.\nbsp a function which will be used
+check.  higher order parameters, i.e.\nbsp a function which will be used
 later, are replaced by a new function which wraps the original in a
 contract checker.
 
@@ -727,7 +738,7 @@ emitted with the culprit identified appropriately.
 
 ;;
 ;; All contracts pertain to the arguments to this function so if the
-;; argument is a high order function, then the contract states: "takes
+;; argument is a higher order function, then the contract states: "takes
 ;; a function which returns positive numbers" or some such.
 
 ;; So how do we describe that contract?
@@ -784,12 +795,12 @@ emitted with the culprit identified appropriately.
     (fo-wrap contract value p n)
     (ho-wrap-1 contract value p n)))
 
-(defn fo-wrap  [contract value p n]
+(defn- fo-wrap  [contract value p n]
   (if (contract value)
     value
     (contract-error p)))
 
-(defn ho-wrap-1 [ct x p n]
+(defn- ho-wrap-1 [ct x p n]
   (let [d (dom ct)
         r (rng ct)]
     (fn [y] (wrap r
@@ -809,32 +820,38 @@ emitted with the culprit identified appropriately.
 
 
 Findler et al. refer to =wrap= as a contract monitor, we prefer
-Contract Enforcement Point (CEP) as "monitor" seems a somewhat passive
+Contract Enforcement Point as "monitor" seems a somewhat passive
 description of something which has the ability to terminate a
-program.  This also allows the use of Contract Definition Point (CDP)
+program.  This also allows the use of Contract Definition Point 
 for the location in the program text where the contract is defined.
 This emphasises the separation between definition and enforcement and
-provides a useful comparison with the terminology used in policy based
+provides a useful analogue with the terminology used in policy based
 management \cite{RFC3198}.
 
 
 The underlying contract implementation is hidden behind utility
-functions.  We need to select a data structure to represent the
-contracts.  As is idiomatic in Clojure development, the first data
-structure of choice is =map=.  Here we define two keys, =:dom= and
-=:rng= to hold the domain and range (pre and post conditions).  We
-provide two implementations of =make-contract-1=: =make-contract-1/2= is
-a simple shorthand version which calls =make-contract-1/4= with default
-values of the message to be used in the case of pre or post condition
-failure.
+functions shown in Listing \ref{contract-utility}.  We need to select
+a data structure to represent the contracts.  As is idiomatic in
+Clojure development, the first data structure of choice is =map=.
+Here we define two keys, =:dom= and =:rng= to hold the domain and
+range (pre and post conditions).  We provide two implementations of
+=make-contract-1=: =make-contract-1/2= is a simple shorthand version
+which calls =make-contract-1/4= with default values of the message to
+be used in the case of pre or post condition failure.
 
-
+#+latex: \begin{listing}[H]
+#+latex: \caption{Contract utility functions}\label{contract-utility}
 #+begin_src clojure :tangle yes :exports code
 (defn make-contract-1 
   ([pre post]
-     (make-contract-1 pre post "Pre condition failed" "Post condition failed"))
+     (make-contract-1 pre
+                      post
+                      "Pre condition failed"
+                      "Post condition failed"))
   ([pre post pre-message post-message]
-     {:dom pre :rng post :pre-message pre-message :post-message post-message}))
+     {:dom pre :rng post
+      :pre-message pre-message
+      :post-message post-message}))
 
 (defn dom [contract]
   (:dom contract))
@@ -845,6 +862,7 @@ failure.
 (defn flat? [x]
   (not (map? x)))
 #+end_src
+#+latex: \end{listing}
 
 We also find it convenient to introduce two simple predicates for
 testing purposes: =lenient= and =strict=.  The first will allow any
@@ -860,10 +878,10 @@ value whilst the second will deny any value.
 #+end_src
 
 
-To examine how this works we look first at an Eiffel style first order
-contract. We define a faulty single parameter function which requires
-its argument to be positive and guarantees its return value is also
-positive.
+To examine how =wrap-1= works we look first at an Eiffel style first
+order contract. We define a faulty single parameter function which
+requires its argument to be positive and guarantees its return value
+is also positive.
 
 
 #+latex: \begin{listing}[H]
@@ -881,8 +899,10 @@ positive.
         "Post condition violated" "Pre condition violated"))
 
 (deftest faulty-sqrt-test
-  (is (thrown-with-msg? java.lang.Exception #"Post condition" (faulty-sqrt 1)))
-  (is (thrown-with-msg? java.lang.Exception #"Pre condition" (faulty-sqrt 0))))
+  (is (thrown-with-msg? java.lang.Exception #"Post condition"
+        (faulty-sqrt 1)))
+  (is (thrown-with-msg? java.lang.Exception #"Pre condition"
+        (faulty-sqrt 0))))
 #+end_src
 #+latex: \end{listing}
 
@@ -911,7 +931,7 @@ whilst =(faulty-sqrt 0)= will declare that the pre condition has been
 violated, with the caller at fault.
 
 
-To demonstrate the application of =wrap= we use a simple high order
+To demonstrate the application of =wrap= we use a simple higher order
 example  based on section 2.2 of \cite{hof}. Consider a function
 =save= which saves a function and =use= which later calls the saved
 function, activating its contract.  We wish to constrain =save= to
@@ -929,7 +949,10 @@ only accept functions which take and return  numbers greater than 0.
   ;;; (bigger-than-0 -> bigger-than-0) -> any
 (defn ff-save [f] (dosync (ref-set
                            ff-saved
-                           (wrap (make-contract-1 gt0? gt0?) f "p" "n")) ))
+                           (wrap (make-contract-1 gt0? gt0?)
+                                 f
+                                 "p"
+                                 "n")) ))
 
 
   ;;; bigger-than-0 -> bigger-than-0
@@ -958,7 +981,8 @@ The =deftest= of Listing \ref{lst:ff-use} validates our contract
 implementation, demonstrating that exceptions are thrown  should
 either the argument or return value of the stored function be less
 than zero. Similar unit tests are provided for the rest of our
-framework implementation but are omitted from this document.
+framework implementation but are only show here where they provide a
+useful demonstration of function usage.
 
 
 
@@ -999,8 +1023,7 @@ a single argument.
        ~(clojure.walk/postwalk-replace wrapped-arg body))))
 
 
-(defcontract-1 ff-save-2 f (make-contract-1 gt0? gt0?)
-  (dosync (ref-set ff-saved f)))
+
 
 #+end_src
 #+latex: \end{listing}
@@ -1009,7 +1032,9 @@ Examining what's happening in Listing \ref{defcontract1}: the =let=
 line creates =wrapped-arg=, a map holding the original function
 argument and its intended replacement. This replacement argument calls
 =wrap= with both the original argument and its contract. The following
-line, starting with =`= forms the new function definition; forms
+line, starting with 
+#+latex: \verb=`=
+the new function definition; forms
 prefixed with \tilde are replaced with the result of their evaluation,
 all other forms are rendered verbatim.  The function
 =postwalk-replace= will replace each occurrence of the original
@@ -1026,7 +1051,7 @@ function.  There are two possible approaches to this: we could use
 Clojure's pre-existing post condition check, =:post= discussed previously, or
 we could use the =wrap= function developed above.  The use of =:post=
 checks would limit us to simple flat asserts about the return value,
-whereas we would like to still have the ability to check high order
+whereas we would like to still have the ability to check higher order
 function returns.  Accordingly we will use =wrap= to verify return
 values from functions defined using =defcontract-2=
 
@@ -1035,13 +1060,18 @@ Using this macro we can simplify the definitions of =ff-use= and
 =ff-save= from Listing \ref{lst:ff-use} to:
 
 
+TODO defcontract-1 or -2?
+
 #+latex: \begin{listing}[H]
 #+latex: \caption{ff-save implemented with the contract macro.} 
 #+latex: \label{lst:ff-use2}
 #+srcname: label
 #+begin_src clojure :tangle yes :exports code
-  (defcontract-1 ff-use-2 n gt0?
-    (ff-saved n))
+(defcontract-1 ff-save-2 f (make-contract-1 gt0? gt0?)
+  (dosync (ref-set ff-saved f)))
+
+(defcontract-1 ff-use-2 n gt0?
+  (ff-saved n))
 #+end_src
 #+latex: \end{listing}
 #+begin_src clojure :tangle yes :exports none
@@ -1095,7 +1125,7 @@ the process of wrapping function parameters in contract checking
 code. Unfortunately the resulting code is monolithic; conflating
 function implementation and contract.  This dramatically reduces
 modularity - one of the key advantages of functional programming
-according to \cite{hughes}. When used for functions like the =sqrt=
+\cite{hughes}. When used for functions like the =sqrt=
 example this is not too disastrous: the contract is a consequence of
 the underlying mathematics of the implementation.  But if we need
 similar contracts for other functions reuse will be limited.  In some
@@ -1109,8 +1139,7 @@ with its implementation.  Aspect Oriented Programming has been used
 \cite{aopdbc} to implement Design by Contract in AspectJ.  We're
 seeking to develop a similar approach where the contract and
 underlying function implementation can be specified separately and
-combined at will. An example of this, for first order contracts, is
-given in \cite[p.\ 173 - 175]{joy}.  
+combined at will.   
 
 
 We therefore consider an alternative approach where we
@@ -1137,9 +1166,10 @@ We now wish to handle an arbitrary number of arguments.  Whilst it is
 not in general possible to determine the arity of a Clojure function,
 in this case we may assume that the number of contracts in the domain
 represents the arity.  We therefore wish to generate a lambda
-function with a argument for each domain contract.  We do not need to
+function with a argument for each domain contract.  Now we see an
+benefit of Clojure's dynamic typing: we do not need to
 modify =make-contract=, instead we just pass a vector of domain
-contracts as the first argument
+contracts as the first argument to that function.
 
 #+latex: \begin{listing}[H]
 #+latex: \caption{Wrapping functions with multiple arguments}\label{ho-wrap} 
@@ -1249,9 +1279,10 @@ replaced by the =newname= parameter passed in to the macro and
         (wrap-arg-contract (list 0 [gt0?])))))
 
 
-(defn zip [a b]
+(defn zip
   "Returns a lazy sequence consisting of pairs made of the first
   elements of a and b, second etc."
+  [a b]
   (map list a b))
 
 
@@ -1361,7 +1392,7 @@ number greater than zero.
 As we can see from the test harness, =+= will satisfy the contract
 whilst =-= fails to maintain the post condition.
 
-Compare this with a function which takes two argumnets, the second of
+Compare this with a function which takes two arguments, the second of
 which obeys =two-arg-contract=:
 
 #+BEGIN_SRC clojure :tangle yes :exports code
@@ -1473,7 +1504,7 @@ of the program at the point the contract was applied, so we need to
 generate the stack trace at contract application time.
 
 Unfortunately here we face a potential performance impact.  Because of
-the delayed contract checking of high order functions, we don't know
+the delayed contract checking of higher order functions, we don't know
 at the time we apply a contract whether or not that contract will be
 fulfilled and hence whether or not the stack trace will be needed.
 Accordingly we must generate a stack trace for every contract
@@ -2025,6 +2056,18 @@ tutor, Dr Hinze, I revisited the modular solution and this time was
 able to achieve a more satisfactory solution --- the =attach-contracts=
 macro of Listing \ref{ }. 
 
+Clojure's compile time macros, though very powerful, proved confusing
+at times.  This was one of the difficulties which led to my initial
+monolithic approach.  On other occasions I avoided going down the
+macro root. The arity checking code of \ref{ho-wrap} could be written
+more flexibly as a macro rather than having explicit branches for
+arity 0,1,2.  I was concerned that, though more flexible, such an
+approach would obscure the meaning of the code, both to the reader
+and to me. This question of how sophisticated to make one's code seems
+to be a recurring one: I've had many conversations over the
+desirability or otherwise of using some C++ template features in
+production code.
+
 The worked example of section \ref{} provided a number of insights
 into the modular framework.  It was very satisfying to be able to
 attach contracts to normal Clojure functions as in the use of
@@ -2217,7 +2260,7 @@ To Be Completed
 * Notes :noexport:
 
 
-make-contract-1 is actually making a HIGH ORDER contract.  First order
+make-contract-1 is actually making a HIGHER ORDER contract.  First order
 contracts are flat assertions.
 
 what do we do about functions that take more than one parameter?
