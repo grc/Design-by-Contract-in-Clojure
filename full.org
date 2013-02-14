@@ -36,7 +36,7 @@
     urlcolor=black,
     pdfauthor=Giles Chamberlin,
     pdfsubject=Submission for M.Sc. in Software Engineering
-    pdftitle=Design by Contract in Conjure
+    pdftitle=Design by Contract in Clojure
 }
 
 
@@ -151,7 +151,7 @@ contract violation blame is then assigned depending upon which
 condition was violated.
 
 As an example of the notation, consider a truncated version of Meyer's STACK2 class
-\cite{oosc}[p.\ 349]
+\cite[p.\ 349]{oosc}
 #+latex: \begin{listing}[H]
 #+LATEX: \caption{Eiffel's assertion checking mechanism}
 #+begin_example
@@ -1049,7 +1049,7 @@ contracts attached to them, without requiring access to the function body.
 
 
 *** A monolithic approach
-
+\label{monolithic}
 Inspired by an intent to emulate the function definition macro =defn=,
 with support for contracts on higher order functions, we construct a
 macro =defcontract=.  For simplicity we only consider functions taking
@@ -1160,6 +1160,7 @@ Using this macro we can simplify the definitions of =ff-use= and
 #+latex: \end{listing}
 
 *** A modular approach
+\label{modular}
 The macro defined in Figure \ref{defcontract1} successfully automates
 the process of wrapping function parameters in contract checking
 code. Unfortunately the resulting code is monolithic; conflating
@@ -1785,7 +1786,7 @@ so changing implementations could lead to unexpected contract
 violations .
 
 * A worked example
-
+\label{worked}
 My day job is to develop software that forms the infrastructure for a
 video conferencing deployment - effectively a telephone exchange for
 video conferencing.  In order to test this we use a number of video
@@ -1892,12 +1893,12 @@ possible implementations come to mind: either take a map of endpoints
 and setup functions as an arguments, or refer to a global value. In
 keeping with Clojure's functional nature we choose the former. Our
 abstract functions, of which =call-setup-request= is the first, will
-therefore take a map of ={type, function} and an the endpoint type as
+therefore take a map of ={type, function}= and an the endpoint type as
 their first arguments.  The author of a plugin will be required to
 register his function in that map, using our registration function.
 
 #+latex: \begin{listing}[H]
-#+latex: \caption{} 
+#+latex: \caption{Call setup request interface} 
 #+begin_src clojure :tangle yes :exports code
 (def concrete-setup-request (ref {}))
 
@@ -1910,7 +1911,8 @@ register his function in that map, using our registration function.
     (plugin-fn endpoint uri)))
 #+end_src
 #+latex: \end{listing}
-TODO Fully functional call-setup-request
+
+TODO Fully functional call-setup-request required for assoc claim
 
 
 At this point we have no control over the implementation of the
@@ -1957,7 +1959,7 @@ of assumed arity 2, taking both an IPv4 address and a SIP URI,
 returning a =code-setup-request-result=.
 
 #+latex: \begin{listing}[H]
-#+latex: \caption{} 
+#+latex: \caption{Contracted version of setup request} 
 #+begin_src clojure :tangle yes :exports code
 (defn callable? [f]
   (or
@@ -1985,7 +1987,7 @@ this case intended to support Polycom's HDX series of endpoints.
 the specified contract on setup function implementations.
 
 #+latex: \begin{listing}[H]
-#+latex: \caption{} 
+#+latex: \caption{Specialised implementation of setup requests}\label{hdx} 
 #+begin_src clojure :tangle yes :exports code
 
 (defn hdx-setup [ip-address uri]
@@ -2081,7 +2083,7 @@ passed to it.
 One of the stated goals of this project was to learn more about
 Clojure as a language.  The two different approaches to applying
 contracts to functions; the monolithic and modular approaches of
-\ref{codegen} arose through my initial unfamiliarity with the
+Section \ref{codegen} arose through my initial unfamiliarity with the
 language.  My first attempts at writing a macro to wrap function
 arguments failed with a number of errors related to symbol resolution
 and inadvertent variable capture or anaphora.  I had not fully
@@ -2094,13 +2096,13 @@ development. Rather than stepping back and finding a simpler approach
 I began trying to resolve each immediate error and soon became
 enmeshed in a hopelessly complicated code.  Deciding that a modular
 solution could not be produced in Clojure, I came up with the
-monolithic solution presented in Listing \ref{}.
+monolithic solution presented in Section \ref{monolithic}.
 
 As the dissertation progressed my familiarity with the language, and
 in particular macros, increased.  Prompted by a question from my
 tutor, Dr Hinze, I revisited the modular solution and this time was
 able to achieve a more satisfactory solution --- the =attach-contracts=
-macro of Listing \ref{ }. 
+macro of Section  \ref{modular}. 
 
 Clojure's compile time macros, though very powerful, proved confusing
 at times.  This was one of the difficulties which led to my initial
@@ -2114,7 +2116,7 @@ to be a recurring one: I've had many conversations over the
 desirability or otherwise of using some C++ template features in
 production code.
 
-The worked example of section \ref{} provided a number of insights
+The worked example of Section \ref{worked} provided a number of insights
 into the modular framework.  It was very satisfying to be able to
 attach contracts to normal Clojure functions as in the use of
 =assoc== in Listing \ref{}.  The ability to apply Design by Contract
@@ -2127,7 +2129,7 @@ Less satisfying is the fragility of the interface to
 =attach-contracts=.  I found myself frequently having to revisit code
 I had written using this function in order to correct the contract
 parameter list: proof that the current design is not intuitive.  More
-concerning, an inadvertent use of a ='= character in \ref{}:
+concerning, an inadvertent use of a ='= character in Listing \ref{hdx}:
 
 =(add-setup-request-impl-c :hdx 'hdx-setup)=
 
