@@ -1912,13 +1912,25 @@ register his function in that map, using our registration function.
 #+end_src
 #+latex: \end{listing}
 
-TODO Fully functional call-setup-request required for assoc claim
+#+latex: \begin{listing}[H]
+#+latex: \caption{Call setup request interface} 
+#+begin_src clojure :tangle yes :exports code
+(defn call-setup-request [function-map endpoint-type endpoint url]
+  (let [plugin-fn (endpoint-type function-map)]
+    (plugin-fn endpoint url)))
+
+#+end_src
+#+latex: \end{listing}
 
 
-At this point we have no control over the implementation of the
-functions stored in =concrete-setup-request= beyond the moral pressure
-of documentation.  We wish to be able to place a contract on those
-functions passed to =add-setup-request-impl=.  
+=function-map= is a map of implementation specific setup request
+functions, keyed on endpoint type.  Typically new elements would be
+added by calling =(assoc map key value)= to return a new map instance
+with the additional element.  This would leave us with no control over
+the implementation of the functions stored in the returned
+=function-map=, beyond that of the moral pressure of documentation.
+We wish to be able to place a contract on the functions stored in
+that map.
 
 From knowledge of the implementation of =call-setup-request=, we know
 that the =type= argument will be invoked as a function call on a map.
@@ -1959,7 +1971,7 @@ of assumed arity 2, taking both an IPv4 address and a SIP URI,
 returning a =code-setup-request-result=.
 
 #+latex: \begin{listing}[H]
-#+latex: \caption{Contracted version of setup request} 
+#+latex: \caption{Contracted version of setup request} \label{assoc-contract}
 #+begin_src clojure :tangle yes :exports code
 (defn callable? [f]
   (or
@@ -1973,8 +1985,8 @@ returning a =code-setup-request-result=.
    call-setup-request-result?))
 
 (attach-contracts add-setup-request-impl-c 
-                  add-setup-request-impl
-                  [[callable?] setup-request-contract])
+                  assoc
+                   [[map?][callable?] setup-request-contract] )
 
 #+End_src
 #+latex: \end{listing}
@@ -1998,84 +2010,49 @@ the specified contract on setup function implementations.
   ;; An incorrectly implemented version, returning an invalid value
   0)
 
+
+
 (deftest setup-request-test
-  (add-setup-request-impl-c :hdx hdx-setup)
-  (is (thrown-with-msg? java.lang.Exception #"Pre"
-        (call-setup-request :hdx
-                            "invalid-address"
-                            "me@example.com")))
-  
-  (is (thrown-with-msg? java.lang.Exception #"Pre"
-        (call-setup-request :hdx
-                            "192.168.10.1"
-                            "invalid-uri")))
-  (is (= :ok
-         (call-setup-request :hdx
-                             "192.168.10.1"
-                             "me@example.com" )))
-  
-  (add-setup-request-impl-c :faulty faulty-setup-request)
-  (is (thrown-with-msg? java.lang.Exception #"Post"
-        (call-setup-request :faulty
-                            "192.168.10.1"
-                            "me@example.com"))))
+  (let [m  
+        (add-setup-request-impl-c {}  :hdx hdx-setup)]
+    (is (thrown-with-msg? java.lang.Exception #"Pre"
+          (call-setup-request m
+                              :hdx
+                              "invalid-address"
+                              "me@example.com")))
+    (is (thrown-with-msg? java.lang.Exception #"Pre"
+          (call-setup-request m
+                              :hdx
+                              "192.168.10.1"
+                              "invalid-uri")))
+    (is (= :ok
+           (call-setup-request m
+                               :hdx
+                               "192.168.10.1"
+                               "me@example.com" )))))
+
 
 
 #+End_src
-#+latex: \end{listing}
-
+#+latex: \end{listing
+}
 As can be seen from the test suite, should the concrete implementation
 be invoked with invalid arguments, a pre condition violation is
 indicated, exonerating the plugin developer.  In the case of
-=faulty-setup-request=, a post condition is indicated, blaming teh
+=faulty-setup-request=, a post condition is indicated, blaming the
 developer of the plugin for the error.
 
-
-
-
-For a simple call test we wish to place a call to an alias which,
-barring product bugs, should be answered within 5 seconds.  We
-therefore combine the call setup and status query in a blocking
-function which will return on successful call setup, call setup
-failure or failure to establish a call within the given time limit.
-This takes the two device specific functions as arguments.
-
-#+BEGIN_SRC clojure
-;; setup-fn takes an valid SIP URI and returns {:ok,:setup-failed}
-;; established-fn? returns {true, nil}
-;; alias is a SIP URI
-(defn blocking-setup [setup-fn, established-fn?, alias]
-  (setup-fn alias)
-  (established-fn? 5))
-
-
-
-(defn call-setup-hdx
-  "Place a call setup attempt from the HDX at
-   `endpoint-ip' to the SIP URI `alias'"
-   [endpoint-ip alias]
-  ;; code omitted
-  )
-
-
-(defn call-established-hdx? 
-  "Waits up to `timeout' to see if the HDX endpoint
-  at `endpoint-ip' is in a call"
-  [endpoint-ip timeout]
-  ;; code omitted
-  )
-
-#+END_SRC    
  
-We wish to allow the independent development of support for new
-endpoint types, but also need to ensure that the interface software
+We wished to allow the independent development of support for new
+endpoint types, but also needed to ensure that the interface software
 developed for those new endpoints conforms to the needs of our test
 harness.  Whilst specifying the requirements in the test harness
 documentation ought to suffice, experience has shown that
-documentaion is often not consulted and even if checked, constraints
-not necessarily complied with.  We will therefore establish contracts
+documentation is often not consulted and even if checked, constraints
+not necessarily complied with.  We have therefore established contracts
 on our test harness software which place obligations on the functions
 passed to it.
+
 * Discussion
 
 ** On learning Clojure
@@ -2119,7 +2096,7 @@ production code.
 The worked example of Section \ref{worked} provided a number of insights
 into the modular framework.  It was very satisfying to be able to
 attach contracts to normal Clojure functions as in the use of
-=assoc== in Listing \ref{}.  The ability to apply Design by Contract
+=assoc== in Listing \ref{assoc-contract}.  The ability to apply Design by Contract
 retrospectively to existing functions vastly increases the attraction
 of such a framework.  If every  function had to be written with
 contracts in mind, as in the initial monolithic framework, the
