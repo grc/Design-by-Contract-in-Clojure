@@ -220,27 +220,49 @@ specification.  This short form includes the pre and post conditions.
 
 
 
-** JML
+** Java Modelling Language
 
-JML \cite{jml} provides a Design by Contract framework for Java.  Much
-of the functionality is similar to that introduced in Eiffel: pre and
-post conditions are provided for class methods and inheritance is
-supported through the respective  weakening and strengthening of those
-pre and post conditions. The exact nature of the refinement of pre 
-and post conditions differs from that in Eiffel \cite{toth10}.  We
-discuss this in section  \ref{meta}.
+The Java Modelling Language (JML) \cite{jml} provides a Design by
+Contract framework for Java.  Much of the functionality is similar to
+that introduced in Eiffel: pre and post conditions are provided for
+class methods and inheritance is supported through the respective
+weakening and strengthening of those pre and post conditions. The
+exact nature of the refinement of pre and post conditions differs from
+that in Eiffel \cite{toth10}.  We discuss this in section \ref{meta}.
 
-JML is written in terms of annotations embedded in the comments of the
-Java program \cite{jmlc}.  These comments are then processed by =jmlc=
-which generates a wrapper class to enforce the contract and delegates
-the implementation to the native java code.  The use of annotated
-comments simplifies the implementation of =jmlc=: it just has to
-pre-process the annotations and generate legal java which is then
-compiled as usual.  Unfortunately it has the disadvantage that the
-usual productivity tools associated with a modern development
-environment: syntax highlighting, auto-completion etc. are no longer
-available. To the tool, the JML markup appears to be simply comments
-and is processed as such.
+Listing \ref{lst-jml} is an example taken from introductory paper to
+JML \cite{jml}.  As can be seen, JML is written in terms of
+annotations embedded in the comments of the Java program \cite{jmlc}.
+These comments are then processed by =jmlc= which generates a wrapper
+class to enforce the contract and delegates the implementation to the
+native java code.  The use of annotated comments simplifies the
+implementation of =jmlc=: it just has to pre-process the annotations
+and generate legal java which is then compiled as usual.
+Unfortunately it has the disadvantage that the usual productivity
+tools associated with a modern development environment: syntax
+highlighting, auto-completion etc. are no longer available. To the
+tool, the JML markup appears to be simply comments and is processed as
+such.
+
+#+latex: \begin{listing}[H]
+#+LATEX: \caption{Eiffel's assertion checking mechanism}\label{lst-jml}
+#+begin_example
+
+import org.jmlspecs.models.JMLDouble;
+
+public class SqrtExample {
+    
+  public final static double eps = 0.0001;
+  
+  //@ requires x >= 0.0;
+  //@ ensures JMLDouble.approximatelyEqualTo(x, \result * \result, eps);
+  public static double sqrt(double x) {
+    return Math.sqrt(x);
+  }
+}
+#+end_example
+#+latex: \end{listing}
+
 
 A distinctive aspect of JML, in contrast to Eiffel, is its support for
 model based specification based on the work in Larch
@@ -729,11 +751,17 @@ the can only be checked when invoked.
 
 In order to increase the ability to use Design by Contract techniques
 in Clojure, we intend to construct a library which provides support
-for higher order contract checking based on the work of \cite{hof}.  The
-library should be written in terms of Clojure itself and should
+for higher order contract checking based on the work of \cite{hof}.
+The library should be written in terms of Clojure itself and should
 allow us to easily view the contracts pertinent to a function.  The
 ability to adjust the detailed behaviour of the framework to suit
 different usages is also desirable.
+
+For the contract's themselves we will make no effort to prevent the
+programmer modifying state in a contract, indeed we will provide
+access to the full power of the Clojure language. We will limit our
+ourselves to following Meyer's example: requesting the programmer to
+keep the functions simple and "beyond reproach".  
 
 
 
@@ -1905,16 +1933,6 @@ register his function in that map, using our registration function.
 (defn- add-setup-request-impl [type fn-impl]
   (dosync (alter concrete-setup-request conj  {type fn-impl})))
 
-
-(defn call-setup-request [type endpoint uri]
-  (let [plugin-fn (type (deref concrete-setup-request))]
-    (plugin-fn endpoint uri)))
-#+end_src
-#+latex: \end{listing}
-
-#+latex: \begin{listing}[H]
-#+latex: \caption{Call setup request interface} 
-#+begin_src clojure :tangle yes :exports code
 (defn call-setup-request [function-map endpoint-type endpoint url]
   (let [plugin-fn (endpoint-type function-map)]
     (plugin-fn endpoint url)))
@@ -1937,7 +1955,7 @@ that the =type= argument will be invoked as a function call on a map.
 This usage is satisfied by either a function or a keyword.  Though we
 expect a keyword to be used, unnecessary restrictions are to be
 avoided so we endeavour to include both possibilities.  The =fn=
-parameter should take two arguments: a IPv4 address and a SIP URI.  We
+parameter should take two arguments: an IPv4 address and a SIP URI.  We
 have already considered predicates for the ranges of those two
 arguments but are in danger of missing an assumption on the arity
 =fn=.  Determining the arity of a function in Clojure is not easy.
@@ -2034,24 +2052,27 @@ the specified contract on setup function implementations.
 
 
 #+End_src
-#+latex: \end{listing
-}
+#+latex: \end{listing}
 As can be seen from the test suite, should the concrete implementation
 be invoked with invalid arguments, a pre condition violation is
 indicated, exonerating the plugin developer.  In the case of
 =faulty-setup-request=, a post condition is indicated, blaming the
 developer of the plugin for the error.
 
- 
-We wished to allow the independent development of support for new
-endpoint types, but also needed to ensure that the interface software
-developed for those new endpoints conforms to the needs of our test
-harness.  Whilst specifying the requirements in the test harness
-documentation ought to suffice, experience has shown that
-documentation is often not consulted and even if checked, constraints
-not necessarily complied with.  We have therefore established contracts
-on our test harness software which place obligations on the functions
-passed to it.
+In this section we have been considered a real world application of
+contracts on higher order functions.  We wished to allow the
+independent development of support for new endpoint types, but also
+needed to ensure that the interface software developed for those new
+endpoints conforms to the needs of the rest our automated test system.
+Whilst specifying the requirements in the system documentation ought
+to suffice, experience has shown that documentation is often not
+consulted and even if checked, constraints not necessarily complied
+with.  We have therefore established contracts on our test harness
+software which place obligations on the functions passed to it.  The
+modular nature of =attach-contracts= means that we have successfully
+added contracts to a standard library function, specialising it for
+our needs without having to duplicate the code.
+
 
 * Discussion
 
@@ -2154,10 +2175,10 @@ Unit Tests.  This has led to some advocates of Agile Development
 methodologies \cite{c2dbc} arguing that assertions are not useful as their role
 is subsumed by the presence of Unit Tests.  As Design by Contract is
 built upon the use of assertions, this would argue that Design by
-Contracts is also not useful.  
+Contract is also not useful.  
 
 A key difference between the role of the two is that assertions are
-declarative, stating how the world should be; whilst unit tests are
+declarative, stating how the world should be;  unit tests are
 imperative, describing what should happen when a particular stimulus
 is given.  Assertions therefore provide a wide description of the
 desired state, but - in the absence of static checking - this
@@ -2169,21 +2190,21 @@ with the tests describing the conditions under which the system is
 known to function correctly.  In this case "function correctly" may
 be defined as "function in accordance with its contracts".
 
-One of the key aspects of Design by Contract is described in the
-first word: "Design".  In specifying a contract for a function it is
+One of the key aspects of Design by Contract is described in the first
+word: "Design".  In specifying a contract for a function it is
 necessary to think deeply about the requirements of the specification
 of the function and try to separate those from artefacts of its
 implementation.  It is this specification which should then be
 captured in the contract.  Unit testing has an analogous thought
-process in Test Driven Development
-(TDD)\cite{tdd}. When practising
+process in Test Driven Development (TDD)\cite{tdd}. When practising
 TDD the unit tests are written before the implementation code.  This
 change in ordering from the more traditional "design, code, test"
 waterfall highlights the question of how the function will be invoked
-before considering concerns of how to implement it.  A good unit test
-also investigate the functions behaviour for various edge conditions
-but, by its imperative nature, is unlikely to be exhaustive for all
-but the most trivial functions.
+before considering concerns of how to implement it. This tends to
+assist in the production of a well thought out function interface.
+Like a contract, a good unit test will define the functions behaviour
+for various edge conditions but,due to a test's imperative nature, it
+is unlikely to be exhaustive for all but the most trivial functions.
 
 Design by Contract and Test Driven Development provide two
 complementary approaches to improving the quality of software.
@@ -2230,7 +2251,8 @@ usage: =clojure-contrib= currently (Version 1.2) has one =:pre= check
 in 27,000 lines of code. In contrast there are 41 asserts.
 
 A similar picture emerges for the use of validator functions, there
-are no calls to =set-validator!= in =clojure-contrib=.  Refs are in
+are no calls to =set-validator!= in =clojure-contrib=.  This function
+would be required to install a validator for a =ref. Refs are in
 use though: the transaction functions used to alter them are called
 several times:
 
@@ -2275,7 +2297,7 @@ independently, determine whether or not to enforce those contracts?
 
 * Conclusions
 
-To Be Completed
+
 
 \pagebreak
 \bibliographystyle{alpha}
