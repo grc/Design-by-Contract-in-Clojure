@@ -1291,7 +1291,7 @@ a simple use and compare the generated code to that of =wrapit= above.
 #+BEGIN_SRC clojure :tangle yes :exports code
 (declare wrap-arg-contract zip)
 
-(defmacro attach-contracts [newname func contracts]
+(defmacro attach-contracts [newname func contracts post-condition]
   "Create a new function definition `newname' which calls
   `func' with the args stored in arg/contracts wrapped in
    the corresponding contract."
@@ -1299,32 +1299,36 @@ a simple use and compare the generated code to that of =wrapit= above.
     `(defn ~newname ~args
        (let [wrapped-args# 
              (map wrap-arg-contract (zip ~args ~contracts))]
-         (apply ~func wrapped-args# )))))
+         (wrap-x (vector ~post-condition)
+                 (apply ~func wrapped-args# )
+                 "Post condition of return value"
+                 "Pre condition of return value")))))
 
 
 #+END_SRC
 #+latex: \end{listing}
 
 As before, this emits a function definition.  The difference to that
-in the =defcontract= macro is that in the last line the call to
-=apply= invokes a function call with wrapped arguments.  The =let=
-line of the implementation constructs a vector to be used as the
-argument list in the the newly defined function.  There will be as
-many arguments as there were contracts passed in to the call to
-=attach-contracts=.  In order to build this vector we map =gensym=
-over the =contracts= vector.  Invoking =gensym= will return a new
-symbol with a unique name so =args= will be a vector of such symbols;
-ideal for use as an argument list.  One minor convenience has been
-added: =gensym= generates names using the string representation passed
-to it.  As we are running this code at compile time, that string is
-the vector of contracts.  Applying =gensym= directly to that generates
-names such as =[gt0?]3456= which I found difficult to read correctly
-when debugging, interpreting the name as a vector.  To simplify this
-we generate a range over the number of contracts and use that as the
-input to =gensym= resulting in much more readable, all numeric,
-names. Finally, in the =defn= line, =~newname= is replaced by the =newname=
-parameter passed in to the macro and =~args= by our newly created
-vector of symbols.
+in the =defcontract= macro is that the call to =apply= invokes a
+function call with wrapped arguments. As before we wrap the return
+value of this function call in a contract check. The =let= line of the
+implementation constructs a vector to be used as the argument list in
+the the newly defined function.  There will be as many arguments as
+there were contracts passed in to the call to =attach-contracts=.  In
+order to build this vector we map =gensym= over the =contracts=
+vector.  Invoking =gensym= will return a new symbol with a unique name
+so =args= will be a vector of such symbols; ideal for use as an
+argument list.  One minor convenience has been added: =gensym=
+generates names using the string representation passed to it.  As we
+are running this code at compile time, that string is the vector of
+contracts.  Applying =gensym= directly to that generates names such as
+=[gt0?]3456= which I found difficult to read correctly when debugging,
+interpreting the name as a vector.  To simplify this we generate a
+range over the number of contracts and use that as the input to
+=gensym= resulting in much more readable, all numeric, names. Finally,
+in the =defn= line, =~newname= is replaced by the =newname= parameter
+passed in to the macro and =~args= by our newly created vector of
+symbols.
 
 
 #+latex: \begin{listing}[H]
@@ -1382,7 +1386,8 @@ arguments, but requires them both to be positive.  We define a simple
 
 (attach-contracts add-args-c
                   add-args
-                  [ [gt0?] [gt0?] ])
+                  [ [gt0?] [gt0?] ]
+                  lenient)
 
 (deftest add-args-test
   (is (= 8
@@ -1398,6 +1403,8 @@ To understand what the =attach-contracts= macro is doing we can use
 clojure's pretty print and macroexpand functions to see the code
 which is generated at compile time:
 
+
+TODO redo
 #+latex: \begin{listing}[H]
 #+latex: \caption{Macro expansion of attach-contracts}\label{macroexpand} 
 #+BEGIN_SRC clojure :tangle no :exports code 
@@ -1445,7 +1452,7 @@ number greater than zero.
 
 (def two-arg-contract (make-contract-1 [lenient lenient] gt0?))
 
-(attach-contracts two-arg-c invoke-two-arg [two-arg-contract])
+(attach-contracts two-arg-c invoke-two-arg [two-arg-contract] lenient)
 
 (deftest two-arg-test
   (is (= 3 (two-arg-c +)))
@@ -1465,7 +1472,7 @@ which obeys =two-arg-contract=:
 (defn- two-by-two [ a f]
   (f 1 2))
 
-(attach-contracts two-by-two-c two-by-two [[lenient] two-arg-contract])
+(attach-contracts two-by-two-c two-by-two [[lenient] two-arg-contract] lenient)
 
 (deftest two-by-two-test
   (is (= 3 (two-by-two-c 0 +)))
@@ -1478,6 +1485,17 @@ which obeys =two-arg-contract=:
 
 
 ** Blame assignment
+When a contract fails we wish to know where the fault lies: with the
+function implementation or the caller of the function. In this
+section we discuss first how to ascertain which is the guilty party,
+then to provide a trail of evidence showing where in the code base
+the mistake can be found.
+
+As we discussed in Section \ref{} the =wrap= function of Findler and
+Felleisen provides a means of distinguishing between calling and
+called party: the blame alternates between the two as we recurse
+through calls to =wrap= for higher-order functions.
+
 In order to assist the debugging process we wish to able locate the
 code involved in contract failures.  Our intent is to provide that
 information in the same format as produced by tools such as gcc so
@@ -1649,6 +1667,7 @@ contract definitions passed in to the call =attach-contracts= and
 simply store these in string form as function meta data.  To do this
 we use the reader meta data macro =#^=.
 
+TODO not complete (post condition) and can we build on the earlier version?  
 #+begin_src clojure :exports code
 (defmacro attach-contracts-x [newname func contracts]
   "Create a new function definition `newname' which calls
@@ -1986,6 +2005,8 @@ the first element of a list.  The third argument must be a function,
 of assumed arity 2, taking both an IPv4 address and a SIP URI,
 returning a =code-setup-request-result=.
 
+
+TODO can we do a better post condition check than lenient?
 #+latex: \begin{listing}[H]
 #+latex: \caption{Contracted version of setup request} \label{assoc-contract}
 #+begin_src clojure :tangle yes :exports code
@@ -2002,7 +2023,8 @@ returning a =code-setup-request-result=.
 
 (attach-contracts add-setup-request-impl-c 
                   assoc
-                   [[map?][callable?] setup-request-contract] )
+                   [[map?][callable?] setup-request-contract] 
+                   lenient)
 
 #+End_src
 #+latex: \end{listing}
