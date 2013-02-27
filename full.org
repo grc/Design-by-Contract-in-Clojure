@@ -86,8 +86,6 @@ processor core with impunity.  Although many real world programs
 require some side effects to be useful, these can be managed at well
 defined points in the program helping to reduce race conditions.  
 
-
-
 Another tool to manage program complexity is the assertion: a
 statement in the program about the assumed state at that point.
 Should the assertion be incorrect, the program is typically
@@ -95,13 +93,13 @@ terminated.  Assertions were taken further by Meyer's ideas of Design
 by Contract \cite{oosc}, where state is explicitly checked both
 before and after a method call.
 
-Most work on Design by Contract has been based around Object Oriented
+Most work on Design by Contract has been based around Object-oriented
 Programming.  Design by Contract in a functional world brings new
 challenges as it is now necessary to deal with functions as first
 class objects and reason about their state in addition to assertions
 about simple data types.
 
-In this dissertation we take some of the work on Design by Contract in
+In this dissertation will review some of the work on Design by Contract in
 a functional world and use that to develop a Design by Contract
 framework for Clojure.  Clojure is a relatively recent addition to the
 set of functional languages.  A member of the Lisp family of
@@ -140,7 +138,7 @@ implemented in Clojure.
 
 ** Eiffel
 
-Meyer's book "Object Oriented Software Construction" \cite{oosc}
+Meyer's book "Object-oriented Software Construction" \cite{oosc}
 introduced the term "Design by Contract" to much of the software
 engineering community.  In his book, Meyer lays out his views of how
 to develop robust software and in the process introduces a new object
@@ -209,7 +207,7 @@ side effects must be avoided.  Significant? The practice of adding
 debug print statements is wide spread, particular in the case of a
 failed assertion.
 
-With Meyer's strongly object oriented approach, contracts are enforced
+With Meyer's strongly object-oriented approach, contracts are enforced
 when calling the public methods of an object. Calls internal to an
 object neither invoke the contracts nor trigger invariant checks.
 
@@ -228,24 +226,24 @@ that introduced in Eiffel: pre and post conditions are provided for
 class methods and inheritance is supported through the respective
 weakening and strengthening of those pre and post conditions. The
 exact nature of the refinement of pre and post conditions differs from
-that in Eiffel \cite{toth10}.  We discuss this in section \ref{meta}.
+that in Eiffel \cite{toth10}.  We discuss this in Section \ref{meta}.
 
 Listing \ref{lst-jml} is an example taken from introductory paper to
 JML \cite{jml}.  As can be seen, JML is written in terms of
 annotations embedded in the comments of the Java program \cite{jmlc}.
-These comments are then processed by =jmlc= which generates a wrapper
-class to enforce the contract and delegates the implementation to the
-native java code.  The use of annotated comments simplifies the
-implementation of =jmlc=: it just has to pre-process the annotations
-and generate legal java which is then compiled as usual.
-Unfortunately it has the disadvantage that the usual productivity
-tools associated with a modern development environment: syntax
-highlighting, auto-completion etc. are no longer available. To the
-tool, the JML markup appears to be simply comments and is processed as
-such.
+These comments are then processed by =jmlc=, a pre-processor, which
+generates a wrapper class to enforce the contract and delegates the
+implementation to the native java code.  The use of annotated comments
+simplifies the implementation of =jmlc=: it just has to pre-process
+the annotations and generate legal java which is then compiled as
+usual.  Unfortunately it has the disadvantage that the usual
+productivity tools associated with a modern development environment:
+syntax highlighting, auto-completion etc. are no longer available. To
+the tool, the JML markup appears to be simply comments and is
+processed as such.
 
 #+latex: \begin{listing}[H]
-#+LATEX: \caption{Eiffel's assertion checking mechanism}\label{lst-jml}
+#+LATEX: \caption{JML pre and post conditions}\label{lst-jml}
 #+begin_example
 
 import org.jmlspecs.models.JMLDouble;
@@ -302,18 +300,18 @@ possible to simply examine the arguments to a function at call time to
 know if they satisfy the pre condition.
 
 
-Although the absence of higher order contracts has been noted by the
+Although the absence of higher-order contracts has been noted by the
 functional community, it is also of significance in the procedural and
-object oriented communities.  Even in C, function pointers can be
+object-oriented communities.  Even in C, function pointers can be
 passed so it could be advantageous to attach a contract to those
-functions.  In object oriented paradigms, patterns such as the Command
+functions.  In object-oriented paradigms, patterns such as the Command
 Object \cite{gof} allow a closure to be passed to a method for later
 processing; again a candidate for high order contract checking.
 
 
 Racket, previously known as PLT Scheme, has taken on the idea of
 contracts. Contracts in Racket are separated from the function 
-definition in a module exports section \cite{racket}. This allows
+definition in a module exports Section \cite{racket}. This allows
 contracts to be enforced only at module boundaries.  Calls to a
 function within the module do not undergo contract checking.  This
 follows the premise of Eiffel \cite[p.\ 366]{oosc}.
@@ -328,28 +326,28 @@ predicates or function contracts.  Function contracts, in turn,
 consist of a pair of contracts [\ldots] one for the domain of the
 function and one for the range of the function."
 It is this recursive approach to contracts which allows the use of
-higher order functions --- higher order contracts cannot be enforced until
+higher-order functions --- higher-order contracts cannot be enforced until
 some function consumes or produces only first order values.
 
-Central to their implementation of contracts for higher order functions
+Central to their implementation of contracts for higher-order functions
 is the meta function, =wrap= which wraps the underlying function
 implementation.  If the contract is a simple predicate, it is
-evaluated. Higher order contracts consist of two terms: a pre- and
-post- condition, each of which in turn may be first or higher order.
-For these higher order contracts, =wrap= is recursively applied to the
-higher order term.
+evaluated. Higher-order contracts consist of two terms: a pre- and
+post- condition, each of which in turn may be first or higher-order.
+For these higher-order contracts, =wrap= is recursively applied to the
+higher-order term.
 
 \cite{hof} also investigates blame assignment.  Whilst knowing that a
 program is faulty is helpful, knowing where the fault lies is more
 useful.  \cite{hof} introduces the concept of positive and negative
 positions in the =wrap= function.  Initially these are applied to
 caller and called function. Should a first order contract fail the
-positive location is blamed.  Higher order contracts have the positive
+positive location is blamed.  Higher-order contracts have the positive
 and negative locations swapped before the recursive application of
 =wrap=.
 
 
-# higher order contracts described in
+# higher-order contracts described in
 # file:./papers/contracts-as-projections.pdf
 
 
@@ -360,12 +358,12 @@ is on refining the blame assignment in the event of a contract failure.
 Whilst is helpful to know of the existence of a bug in your program,
 knowledge as to where in the program the bug exists is even more
 valuable.  Findler and Felleisen track at most two locations for blame
-assignment. When contracts are being applied to higher order functions,
+assignment. When contracts are being applied to higher-order functions,
 this necessitates discarding dependent contract location data and
 replacing with the current contract's location data.  Hinze et al.
 provide a pair of stacks of locations.  For a first order function
 this simplifies to the Findler and Felleisen model, but carries
-additional information for higher order functions.
+additional information for higher-order functions.
 
 
 
@@ -400,7 +398,7 @@ ancestor was invented by John McCarthy in 1958 \cite{lisp}.
 Various flavours of Lisp have hovered around, but never quite broken
 into, the mainstream software development world. Lisps have played a
 significant role in research into areas such as artificial
-intelligence \cite{paip} and object oriented programming
+intelligence \cite{paip} and object-oriented programming
 \cite{kiczales} where the simplicity of the core language
 \cite{roots-of-lisp} combined with its colonising approach to new
 paradigms makes it a powerful vehicle for experimentation.
@@ -747,19 +745,19 @@ Clojure provides Eiffel like pre and post condition checking through a
 simple assertion mechanism.  But as a functional programming language,
 function arguments are often functions themselves.  Simple pre and
 post condition assertions can not verify these functional arguments as
-the can only be checked when invoked.  
+they can only be checked when invoked.  
 
 In order to increase the ability to use Design by Contract techniques
 in Clojure, we intend to construct a library which provides support
-for higher order contract checking based on the work of \cite{hof}.
+for higher-order contract checking based on the work of \cite{hof}.
 The library should be written in terms of Clojure itself and should
 allow us to easily view the contracts pertinent to a function.  The
 ability to adjust the detailed behaviour of the framework to suit
 different usages is also desirable.
 
-For the contract's themselves we will make no effort to prevent the
+For the contracts themselves we will make no effort to prevent the
 programmer modifying state in a contract, indeed we will provide
-access to the full power of the Clojure language. We will limit our
+access to the full power of the Clojure language. We will limit
 ourselves to following Meyer's example: requesting the programmer to
 keep the functions simple and "beyond reproach".  
 
@@ -788,7 +786,7 @@ Our initial implementation is based on that described by Findler and
 Felleisen \cite{hof}. In Listing \ref{lst:wrap} we define a function, =wrap-1= which
 is used to provide validation of a function parameter.  Should the
 parameter be first-order, =wrap-1= will trigger an immediate assertion
-check.  higher order parameters, i.e.\nbsp a function which will be used
+check.  higher-order parameters, i.e.\nbsp a function which will be used
 later, are replaced by a new function which wraps the original in a
 contract checker.
 
@@ -808,7 +806,7 @@ emitted with the culprit identified appropriately.
 
 ;;
 ;; All contracts pertain to the arguments to this function so if the
-;; argument is a higher order function, then the contract states: "takes
+;; argument is a higher-order function, then the contract states: "takes
 ;; a function which returns positive numbers" or some such.
 
 ;; So how do we describe that contract?
@@ -1001,8 +999,8 @@ whilst =(faulty-sqrt 0)= will declare that the pre condition has been
 violated, with the caller at fault.
 
 
-To demonstrate the application of =wrap-1= we use a simple higher order
-example  based on section 2.2 of \cite{hof}. Consider a function
+To demonstrate the application of =wrap-1= we use a simple higher-order
+example  based on Section 2.2 of \cite{hof}. Consider a function
 =ff-save= which saves a function and =ff-use= which later calls the saved
 function, activating its contract.  We wish to constrain =ff-save= to
 only accept functions which take and return  numbers greater than 0.  
@@ -1045,7 +1043,7 @@ specification notation from \cite{htdp} to specify the expected types
 of arguments and return values.  But it is the goal of executable
 contracts to replace that information in an enforceable way without
 the redundancy of unconnected commentary.  We will visit this problem
-in section \ref{selfdocumenting}.
+in Section \ref{selfdocumenting}.
 
 The =deftest= of Listing \ref{lst:ff-use} validates our contract
 implementation, demonstrating that exceptions are thrown  should
@@ -1079,7 +1077,7 @@ contracts attached to them, without requiring access to the function body.
 *** A monolithic approach
 \label{monolithic}
 Inspired by an intent to emulate the function definition macro =defn=,
-with support for contracts on higher order functions, we construct a
+with support for contracts on higher-order functions, we construct a
 macro =defcontract=.  For simplicity we only consider functions taking
 a single argument.
 
@@ -1144,7 +1142,7 @@ function.  There are two possible approaches to this: we could use
 Clojure's pre-existing post condition check, =:post= discussed previously, or
 we could use the =wrap-1= function developed above.  The use of =:post=
 checks would limit us to simple flat asserts about the return value,
-whereas we would like to still have the ability to check higher order
+whereas we would like to still have the ability to check higher-order
 function returns.  Accordingly we will use =wrap-1= to verify return
 values from functions defined using =defcontract-2=
 
@@ -1432,7 +1430,7 @@ with arguments formed by wrapping the arguments passed to
 =add-args-c=.
 
 
-Considering now higher order functions, we will use the example
+Considering now higher-order functions, we will use the example
 of =invoke-two-arg=, a function which takes as its single parameter 
 a function of arity two.  It applies this function to fixed arguments.
 We also introduce =two-arg-contract= which will constrain the function
@@ -1565,7 +1563,7 @@ For first order contracts this provides a good solution: the contract
 will be evaluated at the same time that it is applied.  In the event
 of failure a stack trace can be generated, describing the sequence of
 events, on this thread at least, which resulted in the contract
-violation.  Things are not so simple for higher order contracts.  The
+violation.  Things are not so simple for higher-order contracts.  The
 contract is not evaluated at the time it is applied but rather
 deferred until the contracted function is executed.  The stack trace
 at contract evaluation time gives little information about the state
@@ -1573,7 +1571,7 @@ of the program at the point the contract was applied, so we need to
 generate the stack trace at contract application time.
 
 Unfortunately here we face a potential performance impact.  Because of
-the delayed contract checking of higher order functions, we don't know
+the delayed contract checking of higher-order functions, we don't know
 at the time we apply a contract whether or not that contract will be
 fulfilled and hence whether or not the stack trace will be needed.
 Accordingly we must generate a stack trace for every contract
@@ -1786,9 +1784,9 @@ call Java code which in turn throws an exception.  We would like to be
 able to impose post condition contracts on this alternative exit.
 
 
-** Clojure and object oriented programming 
+** Clojure and object-oriented programming 
 
-Clojure supports two separate approaches to object oriented
+Clojure supports two separate approaches to object-oriented
 programming.  Since the 1.0 release there has been support for CLOS
 style generic methods; a method is declared as generic and then
 implementations are provided for different argument types.  This
@@ -1843,7 +1841,7 @@ device specific plugin functions can be written.  These may be passed
 in to function calls in the abstract framework for later invocation,
 this adding support for the new device to the interop test framework.
 This provides a functional programming analogue for inheritance in
-object oriented programming.
+object-oriented programming.
 
 As the plugin functions will be written over a period of time by a
 variety of people it is important that the required interface to the
@@ -2060,7 +2058,7 @@ indicated, exonerating the plugin developer.  In the case of
 developer of the plugin for the error.
 
 In this section we have been considered a real world application of
-contracts on higher order functions.  We wished to allow the
+contracts on higher-order functions.  We wished to allow the
 independent development of support for new endpoint types, but also
 needed to ensure that the interface software developed for those new
 endpoints conforms to the needs of the rest our automated test system.
@@ -2144,15 +2142,22 @@ as a function.  The return value of such a form is simply the last
 element: =arg2=, hence my bug.  Having discovered this I was tempted
 to add a number of assertions checking the arguments passed in to
 =ho-wrap= but having already been burnt by going against the grain of
-the language I have resisted this. I believe the idiomatic solution
-to this is the use of unit tests, which initially demonstrated the
+the language I have resisted this. I believe the idiomatic Clojure solution
+is the use of unit tests, which initially demonstrated the
 problem, and a better knowledge of the language to make root cause
 determination quicker.  Coming from a background of static typed
 languages, this still feels somewhat fragile.
 
 
-\cite{citeulike:661450} provides the following table to indicate where
-contracts fit naturally into the checking spectrum.
+
+
+
+
+
+** Contracts and type safety
+
+\cite{citeulike:661450} The following table \cite{citeulike:661450}
+indicates where contracts fit naturally into the checking spectrum.
 
 |                    | static checking      | dynamic checking      |
 |--------------------+----------------------+-----------------------|
@@ -2162,10 +2167,20 @@ contracts fit naturally into the checking spectrum.
 This is in accordance with my findings. A lot of the first order
 contracts I have implemented have been simple type and range checks,
 something which could be under taken by a suitable static type
-system.  The checks on higher order functions were not so amenable to
+system.  The checks on higher-order functions were not so amenable to
 static checking.
- 
 
+So should we abandon dynamic type checking and replace it with a
+static type system in the underlying language? At this point we are
+preparing to joust with dragons /cite{static
+typing}{/cite{lambda}/cite{scripting}.  The debate over the relative
+merits of static and dynamic type checking has raged for a long time
+and is unlikely to be resolved in the near future.  Personally I had
+not spent much time contemplating type systems before this project: I
+viewed a static type checker as primarily a convenient means of
+catching mis-typed variable names.  As a result of this work I now
+intend to investigate type systems in more detail.
+ 
 
 
 ** Design by Contract and Test Driven Development
@@ -2295,18 +2310,28 @@ independently, determine whether or not to enforce those contracts?
 
 
 
+
 * Conclusions
 
+We have seen from our literature survey that the principles of Design
+by Contract in an object-oriented world may be carried through to
+functional programming.  The use of higher-order functions as first
+class objects in functional programming means that  to be useful we
+need to ensure that contracts can be applied to them as well.  
 
+Our two implementations, monolithic and modular, have shown the
+increased flexibility provided by the modular approach.  
+
+Clojure has proved  to be a suitably flexible language with which to
+carry out this investigation.  Its powerful macro facility has
+allowed us to extend the  language to provide support for higher
+order contracts.
 
 \pagebreak
 \bibliographystyle{alpha}
 \bibliography{dbc}
 
-* Notes :noexport:
-
-
-make-contract-1 is actually making a HIGHER ORDER contract.  First order
+* Notes :noexport:  First order
 contracts are flat assertions.
 
 what do we do about functions that take more than one parameter?
