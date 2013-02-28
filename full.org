@@ -1282,16 +1282,16 @@ We forward declare a pair of functions: =wrap-arg-contract= will
 apply wrap to an argument and contract extracted from a list;
 Clojure's de facto pair representation; =zip= will produce a list of
 such pairs from two separate lists.  Implementation of these two will
-follow once we have examined the main =attach-contracts= macro.  Once
+follow once we have examined the main =attach-contracts-1= macro.  Once
 the code is fully presented we will look at the macro expansion from
 a simple use and compare the generated code to that of =wrapit= above.
 
 #+latex: \begin{listing}[H]
-#+latex: \caption{A modular approach to applying contracts}\label{attach-contracts} 
+#+latex: \caption{A modular approach to applying contracts}\label{attach-contracts-1} 
 #+BEGIN_SRC clojure :tangle yes :exports code
 (declare wrap-arg-contract zip)
 
-(defmacro attach-contracts [newname func contracts post-condition]
+(defmacro attach-contracts-1 [newname func contracts post-condition]
   "Create a new function definition `newname' which calls
   `func' with the args stored in arg/contracts wrapped in
    the corresponding contract."
@@ -1314,7 +1314,7 @@ function call with wrapped arguments. As before we wrap the return
 value of this function call in a contract check. The =let= line of the
 implementation constructs a vector to be used as the argument list in
 the the newly defined function.  There will be as many arguments as
-there were contracts passed in to the call to =attach-contracts=.  In
+there were contracts passed in to the call to =attach-contracts-1=.  In
 order to build this vector we map =gensym= over the =contracts=
 vector.  Invoking =gensym= will return a new symbol with a unique name
 so =args= will be a vector of such symbols; ideal for use as an
@@ -1332,7 +1332,7 @@ symbols.
 
 
 #+latex: \begin{listing}[H]
-#+latex: \caption{Supporting functions for attach-contracts}
+#+latex: \caption{Supporting functions for attach-contracts-1}
 #+BEGIN_SRC clojure :tangle yes :exports code
 (defn wrap-arg-contract [arg-contract]
   "Extracts the contract from the pair arg-contract and returns
@@ -1376,7 +1376,7 @@ symbols.
 Considering the trivial case of a function which adds its two
 arguments, but requires them both to be positive.  We define a simple
 =add-args= function to perform the arithmetic and then call
-=attach-contracts= to give a new function, add-args-c,  which imposes
+=attach-contracts-1= to give a new function, add-args-c,  which imposes
 =gt0?= on the two arguments.
 
 
@@ -1384,7 +1384,7 @@ arguments, but requires them both to be positive.  We define a simple
 (defn add-args [a b]
   (+ a b))
 
-(attach-contracts add-args-c
+(attach-contracts-1 add-args-c
                   add-args
                   [ [gt0?] [gt0?] ]
                   lenient)
@@ -1399,38 +1399,40 @@ arguments, but requires them both to be positive.  We define a simple
 
 
 
-To understand what the =attach-contracts= macro is doing we can use
-clojure's pretty print and macroexpand functions to see the code
+To understand what the =attach-contracts-1= macro is doing we can use
+Clojure's pretty print and macroexpand functions to see the code
 which is generated at compile time:
 
-
-TODO redo
 #+latex: \begin{listing}[H]
-#+latex: \caption{Macro expansion of attach-contracts}\label{macroexpand} 
+#+latex: \caption{Macro expansion of attach-contracts-1}\label{macroexpand} 
 #+BEGIN_SRC clojure :tangle no :exports code 
-(clojure.pprint/pprint (macroexpand-1
-                        '(attach-contracts
-                          add-args-c
-                          add-args
-                          [gt0? gt0?])))
+(clojure.pprint/pprint (macroexpand-1 '
+                        (attach-contracts-1
+                         add-args-c
+                         add-args
+                         [gt0? gt0?]
+                         lenient)))
 
 =>
 
 (clojure.core/defn
  add-args-c
- [02768 12769]
+ [04244 14245]
  (clojure.core/let
-  [wrapped-args__2626__auto__
+  [wrapped-args__4076__auto__
    (clojure.core/map
     dbc.core/wrap-arg-contract
-    (dbc.core/zip [02768 12769] [gt0? gt0?]))]
-  (clojure.core/apply add-args wrapped-args__2626__auto__)))
-
+    (dbc.core/zip [04244 14245] [gt0? gt0?]))]
+  (dbc.core/wrap-x
+   (clojure.core/vector lenient)
+   (clojure.core/apply add-args wrapped-args__4076__auto__)
+   "Post condition of return value"
+   "Pre condition of return value")))
 #+END_SRC
 #+latex: \end{listing}
 
 We see from Listing \ref{macroexpand} that the macro expansion of
-=attach-contracts= emits code for the function definition of
+=attach-contracts-1= emits code for the function definition of
 =add-args-c=.  We see in the last line of the expanded macro a call to
 =apply= which causes the original =add-args= function to be called
 with arguments formed by wrapping the arguments passed to
@@ -1452,7 +1454,7 @@ number greater than zero.
 
 (def two-arg-contract (make-contract-1 [lenient lenient] gt0?))
 
-(attach-contracts two-arg-c invoke-two-arg [two-arg-contract] lenient)
+(attach-contracts-1 two-arg-c invoke-two-arg [two-arg-contract] lenient)
 
 (deftest two-arg-test
   (is (= 3 (two-arg-c +)))
@@ -1472,7 +1474,7 @@ which obeys =two-arg-contract=:
 (defn- two-by-two [ a f]
   (f 1 2))
 
-(attach-contracts two-by-two-c two-by-two [[lenient] two-arg-contract] lenient)
+(attach-contracts-1 two-by-two-c two-by-two [[lenient] two-arg-contract] lenient)
 
 (deftest two-by-two-test
   (is (= 3 (two-by-two-c 0 +)))
@@ -1663,13 +1665,12 @@ We will provide a simple =contracts= function which will print
 We now have to store some useful information in the =:contract= meta
 data.  Requesting a developer to perform additional documentation
 tasks is typically an unrewarding activity so we make use of the
-contract definitions passed in to the call =attach-contracts= and
+contract definitions passed in to the call =attach-contracts-1= and
 simply store these in string form as function meta data.  To do this
 we use the reader meta data macro =#^=.
 
-TODO not complete (post condition) and can we build on the earlier version?  
 #+begin_src clojure :exports code
-(defmacro attach-contracts-x [newname func contracts]
+(defmacro attach-contracts [newname func contracts post-condition]
   "Create a new function definition `newname' which calls
   `func' with the args stored in arg/contracts wrapped in
    the corresponding contract."
@@ -1678,7 +1679,10 @@ TODO not complete (post condition) and can we build on the earlier version?
        ~newname ~args
        (let [wrapped-args# 
              (map wrap-arg-contract (zip ~args ~contracts))]
-         (apply ~func wrapped-args# )))))
+         (wrap-x (vector ~post-condition)
+                 (apply ~func wrapped-args# )
+                 "Post condition of return value"
+                 "Pre condition of return value")))))
 #+end_src
 
 
@@ -2000,13 +2004,18 @@ malice, rather than mistake, to bypass the contract checks.
 =add-setup-request-impl-c= takes three arguments.  The map, the key
 into the map of call setup functions, and the setup function
 implementation.  We wish to place a contract of =callable?= on the
-second; the parameter must form part of a valid sexpr when appearing as
-the first element of a list.  The third argument must be a function,
-of assumed arity 2, taking both an IPv4 address and a SIP URI,
-returning a =code-setup-request-result=.
+key; the parameter must form part of a valid sexpr when appearing as
+the first element of a list. Whilst satisfied by a map key, this
+flexibility also allows us to provide a function in this role should
+we wish. The third argument must be a function, of assumed arity 2,
+taking both an IPv4 address and a SIP URI, returning a
+=code-setup-request-result=.  As for the post-conditions on
+add-setup-request-impl-c: we are going to simply return the results
+of the call to =assoc=: a new map with the key/value pair added. As
+we are not refining the behaviour of =assoc=, we choose to impose no
+additional post-conditions, hence the use of =lenient=.
 
 
-TODO can we do a better post condition check than lenient?
 #+latex: \begin{listing}[H]
 #+latex: \caption{Contracted version of setup request} \label{assoc-contract}
 #+begin_src clojure :tangle yes :exports code
@@ -2016,12 +2025,13 @@ TODO can we do a better post condition check than lenient?
    (function? f)))
 
 
+
 (def setup-request-contract
   (make-contract-1
    [ip-address? sip-uri?]
    call-setup-request-result?))
 
-(attach-contracts add-setup-request-impl-c 
+(attach-contracts-1 add-setup-request-impl-c 
                   assoc
                    [[map?][callable?] setup-request-contract] 
                    lenient)
@@ -2175,6 +2185,34 @@ languages, this still feels somewhat fragile.
 
 
 
+
+** Literate programming
+
+This dissertation was undertaken as an exercise in literate
+programming: embedding the source code within the surrounding textual
+description.  I took this approach as I was initially concerned about
+the difficulty of keeping my quoted code excerpts true to those
+actually present in the Design by Contract framework I was developing.
+As I continued, the intermingling of text and code also proved useful
+in the somewhat disjoint development process: I had more commentary
+available describing my previous thought process, making it somewhat
+easier to pick up where I had left off.
+
+The tool chain I was using: emacs' org-mode \cite{orgmode} and
+org-babel \cite{babel} provide a convenient means of tangling files to
+produce pure Clojure code or LaTeX for further processing, providing
+a reassurance as to the veracity of the code present in the final
+dissertation.  The extra step in the workflow: tangle, compile, test;
+proved a minor inconvenience.  Typically I would explore and amend the
+raw Clojure code until I obtained the result I was looking for, then
+back-port those changes to the original org-mode file.  A quick repeat
+of the tangle, compile, test cycle would prove that all changes had
+been captured in the sources.  Given the relatively small amount of
+code produced relative to the accompanying commentary this appeared to
+be a reasonable overhead.  In an environment where code volume
+justifiably outweighs accompanying commentary - such as the early days
+start-up I'm currently working for - such an overhead is harder to
+accommodate.
 
 ** Contracts and type safety
 
