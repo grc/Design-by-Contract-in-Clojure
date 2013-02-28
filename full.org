@@ -49,8 +49,24 @@
 
 
 \begin{abstract}
-What hath I wrought?
+
+  
+
 \end{abstract}
+Programming in a concurrent world is hard.  There is a lot of work
+being undertaken to provide software engineers with tools to help
+develop correct software.  One areas seeing a lot of interest is that
+of functional programming - writing software free of side effects
+that can thus execute concurrently with no issues.  The Clojure
+language, based on the Java Virtual Machine, is one example of this
+approach.
+
+In this dissertation I in
+Functional programming is seeing an increase in popularity as the use
+of concurrent programming increases.
+
+
+
 
 The author confirms that this dissertation does not contain material
 previously submitted for another degree or academic award; and that the
@@ -1483,7 +1499,43 @@ which obeys =two-arg-contract=:
 
 #+END_SRC
 
+There is a problem with applying useful post-conditions using
+=attach-contracts-1=.  Many post-condition contracts need to refer to
+the inputs to the function.  These are not accessible in
+=attach-contracts-1=.  In order to resolve this we will use Clojure's
+dynamic bound variables.  We introduce a new thread-local variable
+=*contracted-function-args*=.  Within a function subject to contracts,
+this variable will be bound to a vector containing the function's
+arguments.  Contracts may then refer to particular arguments by
+indexing into that vector.
 
+#+latex: \begin{listing}[H]
+#+latex: \caption{Providing contract access to function arguments}\label{contracts-2}
+#+BEGIN_SRC clojure :tangle yes :exports code
+(def *contracted-function-args*)
+
+(defmacro attach-contracts-2 [newname func contracts post-condition]
+  "Create a new function definition `newname' which calls
+  `func' with the args stored in arg/contracts wrapped in
+   the corresponding contract."
+  (let [args (vec (map gensym  (range (count contracts))))]
+    `(defn ~newname ~args
+       (binding [*contracted-function-args* ~args]
+         (let [wrapped-args# 
+               (map wrap-arg-contract (zip ~args ~contracts))]
+           (wrap-x (vector ~post-condition)
+                   (apply ~func wrapped-args# )
+                   "Post condition of return value"
+                   "Pre condition of return value"))))))
+#+END_SRC
+#+latex: \end{listing}
+
+The change introduced in Listing \ref{contracts-2} is the call to
+=binding=.  This ties =*contracted-function-args*= to whatever
+arguments were passed in to the macro, represented by =~args=.
+Because =*contracted-function-args*= is accessible to all functions,
+it may be referenced in contracts and will be bound to the
+appropriate value at run time.
 
 
 ** Blame assignment
@@ -1677,12 +1729,13 @@ we use the reader meta data macro =#^=.
   (let [args (vec (map gensym  (range (count contracts))))]
     `(defn ^#{:contracts ~contracts} 
        ~newname ~args
-       (let [wrapped-args# 
-             (map wrap-arg-contract (zip ~args ~contracts))]
-         (wrap-x (vector ~post-condition)
-                 (apply ~func wrapped-args# )
-                 "Post condition of return value"
-                 "Pre condition of return value")))))
+       (binding [*contracted-function-args* ~args]
+         (let [wrapped-args# 
+               (map wrap-arg-contract (zip ~args ~contracts))]
+           (wrap-x (vector ~post-condition)
+                   (apply ~func wrapped-args# )
+                   "Post condition of return value"
+                   "Pre condition of return value"))))))
 #+end_src
 
 
