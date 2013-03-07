@@ -1,6 +1,6 @@
 #+title:     Design by Contract in Clojure
-#+AUTHOR:    Giles Chamberlin
-#+OPTIONS:   H:3 num:t toc:t \n:nil @:t ::t |:t ^:nil -:t f:t *:t <:t
+#+AUTHOR:   Giles Chamberlin \grcbreak Kellogg College \grcbreak University of Oxford
+#+OPTIONS:   H:3 num:t toc:2 \n:nil @:t ::t |:t ^:nil -:t f:t *:t <:t
 #+OPTIONS:   TeX:t LaTeX:t skip:nil d:nil todo:t pri:nil tags:not-in-toc
 #+LaTeX_CLASS_OPTIONS: [a4paper, 12pt] 
 #+LATEX_HEADER: \usepackage{parskip} \usepackage{fourier} \usepackage{minted} \usepackage{cite}
@@ -14,8 +14,19 @@
 
 #+LaTeX_HEADER: \usepackage{upquote} \usemintedstyle{bw} 
 
+#+BEGIN_LATEX:
 \renewcommand\listoflistingscaption{Program listings}
-
+\newenvironment{changemargin}[2]{%
+  \begin{list}{}{%
+    \setlength{\topsep}{0pt}%
+    \setlength{\leftmargin}{#1}%
+    \setlength{\rightmargin}{#2}%
+    \setlength{\listparindent}{\parindent}%
+    \setlength{\itemindent}{\parindent}%
+    \setlength{\parsep}{\parskip}%
+  }%
+  \item[]}{\end{list}}
+#+END_LATEX:
 
 # If we set the twoside option to article then the following will
 # cause each section to appear on an odd numbered page.
@@ -39,39 +50,48 @@
     pdftitle=Design by Contract in Clojure
 }
 
+#+LATEX_HEADER:
 
-
+\thispagestyle{empty}
 
 #+begin_src sh :exports none
   BIBINPUTS=/Users/grc/dissertation/:$BIBINPUTS
   export BIBINPUTS
 #+end_src
 
+\vfill
+#+BEGIN_LATEX:
+\begin{changemargin}{+1cm}{+1cm}
+\begin{center}
+A dissertation submitted in partial fulfilment of the requirements for
+the degree of Master of Science in Software Engineering.
+\end{center}
+\end{changemargin}
+#+END_LATEX:
+\clearpage
 
 \begin{abstract}
-
-  
-
-\end{abstract}
+\noindent
 Programming in a concurrent world is hard.  There is a lot of work
 being undertaken to provide software engineers with tools to help
-develop correct software.  One areas seeing a lot of interest is that
+develop correct software.  One area seeing a lot of interest is that
 of functional programming - writing software free of side effects
 that can thus execute concurrently with no issues.  The Clojure
 language, based on the Java Virtual Machine, is one example of this
 approach.
-
-In this dissertation I in
-Functional programming is seeing an increase in popularity as the use
-of concurrent programming increases.
-
-
-
-
-The author confirms that this dissertation does not contain material
+\\[0.6cm]
+\noindent In the world of object-oriented programming, Design by Contract has
+been much examined as a means of producing more reliable computer
+programs.  This dissertation reviews the literature on Design by
+Contract, including its application to functional programming.  A framework is 
+developed to provide support for Design by Contract in Clojure. This framework 
+is then used to add contract support to a worked example.
+\vfill
+\noindent The author confirms that this dissertation does not contain material
 previously submitted for another degree or academic award; and that the
 work presented here is the author's own, except where otherwise
 stated.
+\end{abstract}
 
 \pagebreak
 [TABLE-OF-CONTENTS]
@@ -242,7 +262,7 @@ that introduced in Eiffel: pre and post conditions are provided for
 class methods and inheritance is supported through the respective
 weakening and strengthening of those pre and post conditions. The
 exact nature of the refinement of pre and post conditions differs from
-that in Eiffel \cite{toth10}.  We discuss this in Section \ref{meta}.
+that in Eiffel \cite{toth10}.  
 
 Listing \ref{lst-jml} is an example taken from introductory paper to
 JML \cite{jml}.  As can be seen, JML is written in terms of
@@ -511,7 +531,24 @@ all:
 #+end_src
 
 
-TODO #' and #" syntax
+*** Reader macros
+
+Clojure forms are read by the reader which parses the text and
+produces Clojure data structures.  There are a number of reader
+macros (totally distinct from the macros discussed above).  These
+trigger special behaviour from the reader.  We will come across a
+number of examples of these in the code examples presented later.
+The table below gives a brief summary of those we use:
+
+| Reader Macro | Meaning                                        |
+|--------------+------------------------------------------------|
+| ;            | Comments out rest of line                      |
+| #\^          | Provides access to meta-data of following form |
+| #"           | Regular expression pattern                     |
+| `            | syntax quote: equivalent to =(quote ....)=     |
+| ~            | unquote: used in macro substitution            |
+| #'           | var-quote: #'x is equivalent to =(var x)=      |
+
 
 ** Other data structures
 
@@ -797,6 +834,7 @@ entirety of this evolving family of definitions are made as
 =myfunc-*=.
 
 ** An initial approach
+\label{initial}
 
 Our initial implementation is based on that described by Findler and
 Felleisen \cite{hof}. In Listing \ref{lst:wrap} we define a function, =wrap-1= which
@@ -1130,10 +1168,8 @@ of Figure \ref{lst:wrap}.
 
 
 
-TODO defcontract-1 or -2?
-
 #+latex: \begin{listing}[H]
-#+latex: \caption{ff-save implemented with the contract macro.} 
+#+latex: \caption{\texttt{ff-save} implemented with the contract macro.} 
 #+latex: \label{lst:ff-use2}
 #+srcname: label
 #+begin_src clojure :tangle yes :exports code
@@ -1499,18 +1535,21 @@ which obeys =two-arg-contract=:
 
 #+END_SRC
 
-There is a problem with applying useful post-conditions using
+*** Delayed evaluation and post-conditions
+
+There is a problem with applying post-conditions using
 =attach-contracts-1=.  Many post-condition contracts need to refer to
-the inputs to the function.  These are not accessible in
-=attach-contracts-1=.  In order to resolve this we will use Clojure's
-dynamic bound variables.  We introduce a new thread-local variable
-=*contracted-function-args*=.  Within a function subject to contracts,
-this variable will be bound to a vector containing the function's
-arguments.  Contracts may then refer to particular arguments by
-indexing into that vector.
+the inputs to the function: "does the list now contain this element?"
+Our modular approach means that contracts written separately from the
+function need to refer to these values.  Lexical scope variables,
+introduced with =let= are therefore of no use: contracts are not
+defined within lexical scope.  Dynamic variables at first appear
+hopeful: introduce a new variable =*contracted-function-args*= at
+global scope, and within =attach-contracts-*= bind that to the current
+argument vector as shown in Listing \ref{contracts-2}.
 
 #+latex: \begin{listing}[H]
-#+latex: \caption{Providing contract access to function arguments}\label{contracts-2}
+#+latex: \caption{An unsuccessful attempt  to provide contract access to function arguments}\label{contracts-2}
 #+BEGIN_SRC clojure :tangle yes :exports code
 (def *contracted-function-args*)
 
@@ -1530,25 +1569,35 @@ indexing into that vector.
 #+END_SRC
 #+latex: \end{listing}
 
-The change introduced in Listing \ref{contracts-2} is the call to
-=binding=.  This ties =*contracted-function-args*= to whatever
-arguments were passed in to the macro, represented by =~args=.
-Because =*contracted-function-args*= is accessible to all functions,
-it may be referenced in contracts and will be bound to the
-appropriate value at run time.
+Unfortunately  we are now halted by our use of higher-order
+contracts: by the time the wrapped returned value of
+=attach-contracts-2= is evaluated, the binding has been exited
+and =*contracted-function-args*= no longer holds the relevant
+argument vector.  We have essentially encountered the problem in the
+C libraries where some functions set =errno= with important
+information.  If you don't check in time it's lost.  As our design
+ethos revolves around delayed evaluation, checking in time is not
+possible.
 
+This restricts our use of post-conditions to general statements about
+the return value and excludes the ability to make input dependent
+statements about higher-order return values.  First-order return
+values may still be verified using Clojure's existing mechanisms.
 
-** Blame assignment
+** Fault location
 When a contract fails we wish to know where the fault lies: with the
 function implementation or the caller of the function. In this
 section we discuss first how to ascertain which is the guilty party,
 then to provide a trail of evidence showing where in the code base
 the mistake can be found.
 
-As we discussed in Section \ref{} the =wrap= function of Findler and
-Felleisen provides a means of distinguishing between calling and
-called party: the blame alternates between the two as we recurse
-through calls to =wrap= for higher-order functions.
+As we discussed in Section \ref{initial} the =wrap= function of
+Findler and Felleisen provides a means of distinguishing between
+calling and called party: the blame alternates between the two as we
+recurse through calls to =wrap= for higher-order functions.  We now
+know which side of the function boundary the blame lies on, but we
+wish to determine the guilty party more accurately.
+
 
 In order to assist the debugging process we wish to able locate the
 code involved in contract failures.  Our intent is to provide that
@@ -1698,8 +1747,6 @@ maintain a call stack for the current thread.
 
 ** Contract Documentation
 \label{selfdocumenting}
-TODO To be completed - brief description of contracts as meta data to
-function, functions to print that meta data
 
 As with the original definition of Design by Contract \cite[p.\ 389]{oosc}, we
 wish to ensure that our contract observing functions are self
@@ -1849,43 +1896,11 @@ by testing a function argument for errors when it's passed rather than
 when it is used.  It is important that our wrap mechanism should not
 cause unwarranted evaluation of lazy sequences. 
 
+Of itself, =wrap= poses no problems: it simply adds another function
+call in to the chain in order to obtain a parameter value.  The
+concern arises when contracts are written: a naive contract to
 
 
-
-** Post conditions and exceptions
-The post condition handling we have considered so far is limited to
-the case of a normal return from the function.  As we have seen,
-Clojure integrates tightly with Java and can throw Java exceptions or
-call Java code which in turn throws an exception.  We would like to be
-able to impose post condition contracts on this alternative exit.
-
-
-** Clojure and object-oriented programming 
-
-Clojure supports two separate approaches to object-oriented
-programming.  Since the 1.0 release there has been support for CLOS
-style generic methods; a method is declared as generic and then
-implementations are provided for different argument types.  This
-naturally provides support for multimethods: implementations are
-chosen based on the type of all, not just one, of their arguments.
-
-
-More recent versions of Clojure also support protocols.  These are a
-named set of named methods, effectively an interface definition.  A
-type then defines which protocols it implements.  It is this latter
-approach which we will consider.
-
-As there is no implementation inheritance, we can limit our contracts
-to just applying to the definition of the protocol.  A case could be
-made for supporting Liskov Substituion, allowing the protocol
-implementation to strengthen the post conditions or weaken the
-pre conditions.  From a pragmatic view point, the author feels that
-this would just lead to increased difficulties in usage.  Though a
-programmer should adhere to the defined protocol contract, if in
-practice a weaker contract were implemented it is possible that the
-observed behaviour would be assumed to be the documented interface and
-so changing implementations could lead to unexpected contract
-violations .
 
 * A worked example
 \label{worked}
@@ -1995,17 +2010,13 @@ possible implementations come to mind: either take a map of endpoints
 and setup functions as an arguments, or refer to a global value. In
 keeping with Clojure's functional nature we choose the former. Our
 abstract functions, of which =call-setup-request= is the first, will
-therefore take a map of ={type, function}= and an the endpoint type as
+therefore take a map of ={type, function}= and an endpoint type as
 their first arguments.  The author of a plugin will be required to
 register his function in that map, using our registration function.
 
 #+latex: \begin{listing}[H]
 #+latex: \caption{Call setup request interface} 
 #+begin_src clojure :tangle yes :exports code
-(def concrete-setup-request (ref {}))
-
-(defn- add-setup-request-impl [type fn-impl]
-  (dosync (alter concrete-setup-request conj  {type fn-impl})))
 
 (defn call-setup-request [function-map endpoint-type endpoint url]
   (let [plugin-fn (endpoint-type function-map)]
@@ -2253,8 +2264,8 @@ easier to pick up where I had left off.
 
 The tool chain I was using: emacs' org-mode \cite{orgmode} and
 org-babel \cite{babel} provide a convenient means of tangling files to
-produce pure Clojure code or LaTeX for further processing, providing
-a reassurance as to the veracity of the code present in the final
+produce pure Clojure code or LaTeX for further processing, providing a
+reassurance as to the veracity of the code present in the final
 dissertation.  The extra step in the workflow: tangle, compile, test;
 proved a minor inconvenience.  Typically I would explore and amend the
 raw Clojure code until I obtained the result I was looking for, then
@@ -2432,17 +2443,70 @@ functional programming.  The use of higher-order functions as first
 class objects in functional programming means that  to be useful we
 need to ensure that contracts can be applied to them as well.  
 
-Our two implementations, monolithic and modular, have shown the
-increased flexibility provided by the modular approach.  
+We have produced two implementations, monolithic and modular, that
+allow higher-order contracts to be used in Clojure.  Of these the
+modular approach has shown itself to be significantly more flexible
+and powerful. Our worked example took this second approach to apply
+contracts to an automation framework based on a real world example.
 
-Clojure has proved  to be a suitably flexible language with which to
-carry out this investigation.  Its powerful macro facility has
-allowed us to extend the  language to provide support for higher
-order contracts.
+Clojure has proved to be a suitably flexible language with which to
+carry out this investigation.  Its powerful macro facility has allowed
+us to extend the language to provide support for higher-order
+contracts.  At times the power of the tool provided by macros
+threatened to overwhelm: if you have the ability to create new
+language facilities then these new facilities must be created with
+the same care as the original language.
+
+
+** Possible future developments
+*** Post conditions and exceptions
+The post condition handling we have considered so far is limited to
+the case of a normal return from the function.  As we have seen,
+Clojure integrates tightly with Java and can throw Java exceptions or
+call Java code which in turn throws an exception.  We would like to be
+able to impose post condition contracts on this alternative exit.
+
+*** Clojure and object-oriented programming 
+
+Clojure supports two separate approaches to object-oriented
+programming.  Since the 1.0 release there has been support for CLOS
+style generic methods; a method is declared as generic and then
+implementations are provided for different argument types.  This
+naturally provides support for multimethods: implementations are
+chosen based on the type of all, not just one, of their arguments.
+
+
+More recent versions of Clojure also support protocols.  These are a
+named set of named methods, effectively an interface definition.  A
+type then defines which protocols it implements.  It is this latter
+approach which we will consider.
+
+As there is no implementation inheritance, we can limit our contracts
+to just applying to the definition of the protocol.  A case could be
+made for supporting Liskov Substituion, allowing the protocol
+implementation to strengthen the post conditions or weaken the
+pre conditions.  From a pragmatic view point, the author feels that
+this would just lead to increased difficulties in usage.  Though a
+programmer should adhere to the defined protocol contract, if in
+practice a weaker contract were implemented it is possible that the
+observed behaviour would be assumed to be the documented interface and
+so changing implementations could lead to unexpected contract
+violations .
+
+*** Type systems
+
+As indicated earlier, much of my use of contracts has been to
+determine the type of arguments passed in to a function.  Although I
+have had a long exposure to static typed languages (primarily Pascal,
+C and C++) I have always just taken the type system for granted.  My
+work on this dissertation has piqued my interest in type systems
+which I now intend to investigate a little further.
 
 \pagebreak
 \bibliographystyle{alpha}
 \bibliography{dbc}
+
+
 
 * Notes :noexport:  First order
 contracts are flat assertions.
@@ -2512,3 +2576,4 @@ People move code around like clay - they don't quite think as
 <ohpauleez> Programming to an interface instead of an implementation helps to
 	    avoid pointless dependencies between calling pieces of code
 
+Desig
