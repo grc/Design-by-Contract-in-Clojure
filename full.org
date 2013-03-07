@@ -370,22 +370,42 @@ It is this recursive approach to contracts which allows the use of
 higher-order functions --- higher-order contracts cannot be enforced until
 some function consumes or produces only first order values.
 
-Central to their implementation of contracts for higher-order functions
-is the meta function, =wrap= which wraps the underlying function
-implementation.  If the contract is a simple predicate, it is
-evaluated. Higher-order contracts consist of two terms: a pre- and
-post- condition, each of which in turn may be first or higher-order.
-For these higher-order contracts, =wrap= is recursively applied to the
-higher-order term.
+Central to their implementation of contracts for higher-order
+functions is the meta function, \texttt{wrap} shown in Listing
+\ref{ff-wrap} which wraps the underlying function implementation.  If
+the contract is a simple predicate, it is evaluated. Higher-order
+contracts consist of two terms: a pre- and post- condition, each of
+which in turn may be first or higher-order.  For these higher-order
+contracts,\texttt{wrap} is recursively applied to the higher-order
+term.
 
-\cite{hof} also investigates blame assignment.  Whilst knowing that a
-program is faulty is helpful, knowing where the fault lies is more
+#+latex: \begin{listing}[H]
+#+LATEX: \caption{Findler and Felleisen's \texttt{wrap} meta-function} \label{ffwrap}
+#+begin_example
+wrap: t contract -> t -> string -> string -> t
+wrap = fix wrap \lambda ct \lambda x \lambda p \lambda n
+  if flatp(ct) then 
+    if (pred(ct)) x then x else error(p)
+  else
+    let d = dom(ct)
+        r = rng(ct)
+    in
+        \lambda y . wrap r
+                (x (wrap d y n p))
+                p
+                n
+
+λ
+#+end_example
+#+latex: \end{listing}
+
+\cite{hof} also investigates blame assignment.  
 useful.  \cite{hof} introduces the concept of positive and negative
-positions in the =wrap= function.  Initially these are applied to
-caller and called function. Should a first order contract fail the
-positive location is blamed.  Higher-order contracts have the positive
-and negative locations swapped before the recursive application of
-=wrap=.
+positions in the \texttt{wrap} function.  Initially these
+are applied to caller and called function. Should a first order
+contract fail the positive location is blamed.  Higher-order contracts
+have the positive and negative locations swapped before the recursive
+application of \texttt{wrap}.
 
 
 # higher-order contracts described in
@@ -1838,7 +1858,7 @@ calculation engine.  A similar claim that runtime contract failure
 should be customisable is made for Microsoft's recent contract
 framework \cite{ECL}.
 
-We have already seen in Section \ref{callstack} how Clojure's dynamic
+We have already seen in Listing \ref{callstack} how Clojure's dynamic
 variables provide the ability to rebind a variable.  This is distinct
 from simply shadowing the original; shadowing will mask a variable
 within the lexical scope of the shadow whilst rebinding provides the
@@ -1855,12 +1875,12 @@ constrained by the error reporting mechanism of the library developer.
 
 #+latex: \begin{listing}[H]
 #+latex: \caption{Customising failure behaviour} \label{lst:contract-failure}
-#+begin_src clojure :tangle yes :exports code
+#+begin_src clojure :tangle no :exports code
 (defn simple-contract-error [position]
   (throw (Exception. (str "Contract failed: " position))))
 
 (def ^{:doc "Function to call on failure of a contract"}
-  ,*contract-failure-function* #'simple-contract-error)
+  *contract-failure-function* #'simple-contract-error)
 
 (defn contract-error [position]
   (*contract-failure-function* position))
@@ -1875,16 +1895,11 @@ can bind this symbol to a function providing the required behaviour.
 The =*= decoration on the function name, often called ear muffs, is
 purely a conventional notation to denote a dynamic variable.
 
-We \label{meta} could use different implementations of =contract-error= to generate
-the expensive stack traces of Listing \ref{stacktrace} or a simpler,
-but less informative implementation.
-  
-
-\cite{citeulike:661450} extends the blame assignment of \cite{hof} to
-provide additional information about those responsible for a contract
-violation.  Given that we now know of two plausible implementations of
-blame assignment, this makes another good variation point to allow for
-future extension.
+Hinze at. al. \cite{citeulike:661450} extend the blame assignment of
+\cite{hof} to provide additional information about those responsible
+for a contract violation.  Given that we now know of two plausible
+implementations of blame assignment, this makes another good variation
+point to allow for future extension.
 
 
 #+latex: \begin{listing}[H]
@@ -1929,17 +1944,19 @@ cause unwarranted evaluation of lazy sequences.
 
 Of itself, =wrap= poses no problems: it simply adds another function
 call in to the chain in order to obtain a parameter value.  The
-concern arises when contracts are written: a naive contract to
+concern arises when contracts are written: a naive contract to check
+that the length of a vector argument exceeds some value could cause
+that vector to realised, forfeiting the benefits of laziness.
 
 
 
 * A worked example
 \label{worked}
 My day job is to develop software that forms the infrastructure for a
-video conferencing deployment - effectively a telephone exchange for
+video conferencing deployment --- effectively a telephone exchange for
 video conferencing.  In order to test this we use a number of video
 endpoints (analogous to a telephone) to place calls in to the system.
-Interoperability between our equipment and the various endpoint
+Interoperability between our equipment and taht of the various endpoint
 manufacturers is an important requirement so we test using a range of
 endpoints.
 
@@ -1953,15 +1970,15 @@ software releases from a single manufacturer.
 We desire to produce a framework which will provide basic third party
 call control for an abstract endpoint type. The framework can then be
 used in the interop test framework for the product under development.
-This will require the ability to set up; tear down and answer calls.
+This will require the ability to set up, tear down and answer calls.
 Basic state querying will also be required: is the endpoint in a call
 or not.  This is a simplified approach for the purposes of this
-dissertation - our current test system is significantly more involved,
-checking audio and video codec selection call quality and a number of
-other areas.  As new endpoint types are acquired in the test lab
+dissertation --- our current test system is significantly more involved,
+checking audio and video codec selection, call quality and a number of
+other areas.  As new endpoint types are acquired in the test lab,
 device specific plugin functions can be written.  These may be passed
 in to function calls in the abstract framework for later invocation,
-this adding support for the new device to the interop test framework.
+thus adding support for the new device to the interop test framework.
 This provides a functional programming analogue for inheritance in
 object-oriented programming.
 
@@ -2073,8 +2090,8 @@ expect a keyword to be used, unnecessary restrictions are to be
 avoided so we endeavour to include both possibilities.  The =fn=
 parameter should take two arguments: an IPv4 address and a SIP URI.  We
 have already considered predicates for the ranges of those two
-arguments but are in danger of missing an assumption on the arity
-=fn=.  Determining the arity of a function in Clojure is not easy.
+arguments but are in danger of missing an assumption on the arity of
+the function.  Determining the arity of a function in Clojure is not easy.
 Whilst functions declared through use of the =defn= macro contain a
 metadata item =:arglists= which, as implied by the name, provides a
 list of the arguments to the function, this does not provide a
@@ -2184,7 +2201,7 @@ indicated, exonerating the plugin developer.  In the case of
 =faulty-setup-request=, a post condition is indicated, blaming the
 developer of the plugin for the error.
 
-In this section we have been considered a real world application of
+In this section we have considered a real world application of
 contracts on higher-order functions.  We wished to allow the
 independent development of support for new endpoint types, but also
 needed to ensure that the interface software developed for those new
@@ -2200,6 +2217,9 @@ our needs without having to duplicate the code.
 
 
 * Discussion
+
+We reflect on how the work undertaken in this dissertation has
+compared with the goals which we set in the Introduction.
 
 ** On learning Clojure
 
@@ -2217,20 +2237,20 @@ typing was new.  I was in danger of adding multiple type checking
 assertions to function arguments, going against the grain of Clojure
 development. Rather than stepping back and finding a simpler approach
 I began trying to resolve each immediate error and soon became
-enmeshed in a hopelessly complicated code.  Deciding that a modular
+enmeshed in hopelessly complicated code.  Deciding that a modular
 solution could not be produced in Clojure, I came up with the
 monolithic solution presented in Section \ref{monolithic}.
 
 As the dissertation progressed my familiarity with the language, and
 in particular macros, increased.  Prompted by a question from my
 tutor, Dr Hinze, I revisited the modular solution and this time was
-able to achieve a more satisfactory solution --- the =attach-contracts=
-macro of Section  \ref{modular}. 
+able to achieve a more satisfactory solution --- the
+=attach-contracts= macro of Section \ref{modular}.
 
 Clojure's compile time macros, though very powerful, proved confusing
 at times.  This was one of the difficulties which led to my initial
 monolithic approach.  On other occasions I avoided going down the
-macro root. The arity checking code of \ref{ho-wrap} could be written
+macro route. The arity checking code of Listing \ref{ho-wrap} could be written
 more flexibly as a macro rather than having explicit branches for
 arity 0,1,2.  I was concerned that, though more flexible, such an
 approach would obscure the meaning of the code, both to the reader
@@ -2242,7 +2262,7 @@ production code.
 The worked example of Section \ref{worked} provided a number of insights
 into the modular framework.  It was very satisfying to be able to
 attach contracts to normal Clojure functions as in the use of
-=assoc== in Listing \ref{assoc-contract}.  The ability to apply Design by Contract
+=assoc= in Listing \ref{assoc-contract}.  The ability to apply Design by Contract
 retrospectively to existing functions vastly increases the attraction
 of such a framework.  If every  function had to be written with
 contracts in mind, as in the initial monolithic framework, the
@@ -2252,7 +2272,8 @@ Less satisfying is the fragility of the interface to
 =attach-contracts=.  I found myself frequently having to revisit code
 I had written using this function in order to correct the contract
 parameter list: proof that the current design is not intuitive.  More
-concerning, an inadvertent use of a ='= character in Listing \ref{hdx}:
+concerning, an inadvertent use of a \texttt{'} character in Listing
+\ref{hdx}:
 
 =(add-setup-request-impl-c :hdx 'hdx-setup)=
 
@@ -2283,7 +2304,7 @@ languages, this still feels somewhat fragile.
 
 ** Literate programming
 
-This dissertation was undertaken as an exercise in literate
+This dissertation was undertaken as an experiment in literate
 programming: embedding the source code within the surrounding textual
 description.  I took this approach as I was initially concerned about
 the difficulty of keeping my quoted code excerpts true to those
@@ -2298,20 +2319,24 @@ org-babel \cite{babel} provide a convenient means of tangling files to
 produce pure Clojure code or LaTeX for further processing, providing a
 reassurance as to the veracity of the code present in the final
 dissertation.  The extra step in the workflow: tangle, compile, test;
-proved a minor inconvenience.  Typically I would explore and amend the
-raw Clojure code until I obtained the result I was looking for, then
-back-port those changes to the original org-mode file.  A quick repeat
-of the tangle, compile, test cycle would prove that all changes had
-been captured in the sources.  Given the relatively small amount of
-code produced relative to the accompanying commentary this appeared to
-be a reasonable overhead.  In an environment where code volume
-justifiably outweighs accompanying commentary - such as the early days
-start-up I'm currently working for - such an overhead is harder to
-accommodate.
+proved only a minor inconvenience.  Typically I would explore and
+amend the raw Clojure code until I obtained the result I was looking
+for, then back-port those changes to the original org-mode file.  A
+quick repeat of the tangle, compile, test cycle would prove that all
+changes had been captured in the sources.  Given the relatively small
+amount of code produced relative to the accompanying commentary this
+appeared to be a reasonable overhead.  In an environment where code
+volume justifiably outweighs accompanying commentary - such as the
+early days start-up I'm currently working for - such an overhead is
+harder to accommodate.
+
+An unforeseen disadvantage was the perpetual desire, and ability, to
+tinker with the code when I was meant to be concentrating on the
+associated commentary. 
 
 ** Contracts and type safety
 
-\cite{citeulike:661450} The following table \cite{citeulike:661450}
+The following table \cite{citeulike:661450}
 indicates where contracts fit naturally into the checking spectrum.
 
 |                    | static checking      | dynamic checking      |
@@ -2327,11 +2352,11 @@ static checking.
 
 So should we abandon dynamic type checking and replace it with a
 static type system in the underlying language? At this point we are
-preparing to joust with dragons /cite{static
-typing}{/cite{lambda}/cite{scripting}.  The debate over the relative
-merits of static and dynamic type checking has raged for a long time
-and is unlikely to be resolved in the near future.  Personally I had
-not spent much time contemplating type systems before this project: I
+preparing to joust with dragons \cite{statictyping},
+\cite{lambda},\cite{scripting}.  The debate over the relative merits
+of static and dynamic type checking has raged for a long time and is
+unlikely to be resolved in the near future.  Personally I had not
+spent much time contemplating type systems before this project: I
 viewed a static type checker as primarily a convenient means of
 catching mis-typed variable names.  As a result of this work I now
 intend to investigate type systems in more detail.
@@ -2341,24 +2366,24 @@ intend to investigate type systems in more detail.
 ** Design by Contract and Test Driven Development
 
 There is fair degree of overlap between the role of assertions and
-Unit Tests.  This has led to some advocates of Agile Development
-methodologies \cite{c2dbc} arguing that assertions are not useful as their role
-is subsumed by the presence of Unit Tests.  As Design by Contract is
-built upon the use of assertions, this would argue that Design by
-Contract is also not useful.  
+that of unit tests.  This has led to some advocates of Agile
+Development methodologies \cite{c2dbc} arguing that assertions are not
+useful as their role is subsumed by the presence of Unit Tests.  As
+Design by Contract is built upon the use of assertions, this would
+argue that Design by Contract is also not useful.
 
-A key difference between the role of the two is that assertions are
-declarative, stating how the world should be;  unit tests are
+A key difference between the roles of the two is that assertions are
+declarative, stating how the world should be; unit tests are
 imperative, describing what should happen when a particular stimulus
 is given.  Assertions therefore provide a wide description of the
-desired state, but - in the absence of static checking - this
-description is only compared with the actuality when code is
-executed.  Whilst this could be in production use on a customer's
-site it is surely better under controlled conditions in the
-development team. Unit testing provides a complementary role,
-with the tests describing the conditions under which the system is
-known to function correctly.  In this case "function correctly" may
-be defined as "function in accordance with its contracts".
+desired state, but --- in the absence of static checking - this
+description is only compared with the actuality when code is executed.
+Better this were done under controlled conditions in the development
+team than on a customer's site.  It is this need to exercise contract
+bearing code that is satisfied by units tests.  The tests describe the
+conditions under which the system is known to function correctly.  In
+this case "function correctly" may be defined as "function in
+accordance with its contracts".
 
 One of the key aspects of Design by Contract is described in the first
 word: "Design".  In specifying a contract for a function it is
@@ -2372,7 +2397,7 @@ change in ordering from the more traditional "design, code, test"
 waterfall highlights the question of how the function will be invoked
 before considering concerns of how to implement it. This tends to
 assist in the production of a well thought out function interface.
-Like a contract, a good unit test will define the functions behaviour
+Like a contract, a good unit test will define the function's behaviour
 for various edge conditions but,due to a test's imperative nature, it
 is unlikely to be exhaustive for all but the most trivial functions.
 
@@ -2422,7 +2447,7 @@ in 27,000 lines of code. In contrast there are 41 asserts.
 
 A similar picture emerges for the use of validator functions, there
 are no calls to =set-validator!= in =clojure-contrib=.  This function
-would be required to install a validator for a =ref. Refs are in
+would be required to install a validator for a =ref=. Refs are in
 use though: the transaction functions used to alter them are called
 several times:
 
@@ -2436,7 +2461,7 @@ on a community which has not adopted first order contract checking is
 unlikely to be worthwhile.  So why has the Clojure, and wider,
 community not adopted Design by Contract?  Whilst I am unaware of any
 formal studies into this, a widely heard response \cite{why-dont},
-\cite{irc-clojure} combine the difficulty of identifying the relevant
+\cite{irc-clojure} combines the difficulty of identifying the relevant
 contracts whilst creating a function and the difficulty in then reusing
 or refactoring this constrained code. 
 
@@ -2444,11 +2469,12 @@ An extreme example of the difficulty of reuse is the Ariane 5 rocket
 failure.  The software was based on that used in the Ariane 4
 programme.  Unfortunately the rocket hardware had improved to such an
 extent that a previously impossible flight trajectory could now be
-achieved.  This resulted in an integer overflow, which was not
-protected as after inspection with the original hardware in mind, it
-was determined that the situation could never arise.  In order to
-preserve CPU cycles, checks were limited to those cases where it was
-deemed possible for the errors to occur.
+achieved.  This resulted in an integer overflow, which was not handled
+at a lower level as, after inspection with the original hardware in
+mind, it was determined that the situation could never arise.  In
+order to preserve CPU cycles, checks were limited to those cases where
+it was deemed possible for the errors to occur.  When the impossible
+error occurred, a chain of events led to the self-destruction of the rocket.
 
 The enquiry into the failure recommended\cite{ariane}
  
@@ -2478,7 +2504,7 @@ We have produced two implementations, monolithic and modular, that
 allow higher-order contracts to be used in Clojure.  Of these the
 modular approach has shown itself to be significantly more flexible
 and powerful. Our worked example took this second approach to apply
-contracts to an automation framework based on a real world example.
+contracts to an automation framework based on a real world scenario.
 
 Clojure has proved to be a suitably flexible language with which to
 carry out this investigation.  Its powerful macro facility has allowed
@@ -2503,7 +2529,7 @@ Clojure supports two separate approaches to object-oriented
 programming.  Since the 1.0 release there has been support for CLOS
 style generic methods; a method is declared as generic and then
 implementations are provided for different argument types.  This
-naturally provides support for multimethods: implementations are
+naturally provides support for multi-methods: implementations are
 chosen based on the type of all, not just one, of their arguments.
 
 
@@ -2532,6 +2558,8 @@ have had a long exposure to static typed languages (primarily Pascal,
 C and C++) I have always just taken the type system for granted.  My
 work on this dissertation has piqued my interest in type systems
 which I now intend to investigate a little further.
+
+** Summary
 
 \pagebreak
 \bibliographystyle{alpha}
