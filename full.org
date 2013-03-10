@@ -135,12 +135,11 @@ challenges as it is now necessary to deal with functions as first
 class objects and reason about their state in addition to assertions
 about simple data types.
 
-In this dissertation we will review some of the work on Design by
-Contract in a functional world and use that to develop a Design by
-Contract framework for Clojure.  Clojure is a relatively recent
-addition to the set of functional languages.  A member of the Lisp
-family of languages, it uses the Java Virtual Machine and so can take
-advantage of the plethora of Java libraries.
+Our aim in this dissertation is to develop a framework which will
+provide support for Design by Contract in Clojure.  Clojure is a
+relatively recent addition to the set of functional languages.  A
+member of the Lisp family of languages, it uses the Java Virtual
+Machine and so can take advantage of the plethora of Java libraries.
 
 In this dissertation we first review the background to Design by
 Contract, its inception, current implementations and extension in to
@@ -380,22 +379,22 @@ contracts,\texttt{wrap} is recursively applied to the higher-order
 term.
 
 #+latex: \begin{listing}[H]
-#+LATEX: \caption{Findler and Felleisen's \texttt{wrap} meta-function} \label{ffwrap}
+#+LATEX: \caption{Findler and Felleisen's \texttt{wrap} meta-function} \label{ff-wrap}
 #+begin_example
 wrap: t contract -> t -> string -> string -> t
-wrap = fix wrap \lambda ct \lambda x \lambda p \lambda n
+wrap = fix wrap \ ct \ x \ p \ n
   if flatp(ct) then 
     if (pred(ct)) x then x else error(p)
   else
     let d = dom(ct)
         r = rng(ct)
     in
-        \lambda y . wrap r
+        \ y . wrap r
                 (x (wrap d y n p))
                 p
                 n
 
-λ
+
 #+end_example
 #+latex: \end{listing}
 
@@ -898,7 +897,7 @@ emitted with the culprit identified appropriately.
 
 
 
-(declare make-contract-1 dom rng flat? lenient strict pred contract-error)
+(declare make-contract dom rng flat? lenient strict pred contract-error)
 
 
 
@@ -907,10 +906,10 @@ emitted with the culprit identified appropriately.
 (deftest contract-construction
   (testing "Flat predicate"
     (is (flat? :foo))
-    (is (not (flat? (make-contract-1 :foo :bar)))))
+    (is (not (flat? (make-contract :foo :bar)))))
   (testing "Contract construction"
-    (is (= 4 (count (make-contract-1 :foo :bar))))
-    (is ((dom (make-contract-1 lenient lenient)) 42))))
+    (is (= 4 (count (make-contract :foo :bar))))
+    (is ((dom (make-contract lenient lenient)) 42))))
 
 
 
@@ -987,16 +986,16 @@ a data structure to represent the contracts.  As is idiomatic in
 Clojure development, the first data structure of choice is =map=.
 Here we define two keys, =:dom= and =:rng= to hold the domain and
 range (pre and post conditions).  We provide two implementations of
-=make-contract-1=: =make-contract-1/2= is a simple shorthand version
-which calls =make-contract-1/4= with default values of the message to
+=make-contract=: =make-contract/2= is a simple shorthand version
+which calls =make-contract/4= with default values of the message to
 be used in the case of pre or post condition failure.
 
 #+latex: \begin{listing}[H]
 #+latex: \caption{Contract utility functions}\label{contract-utility}
 #+begin_src clojure :tangle yes :exports code
-(defn make-contract-1 
+(defn make-contract 
   ([pre post]
-     (make-contract-1 pre
+     (make-contract pre
                       post
                       "Pre condition failed"
                       "Post condition failed"))
@@ -1046,7 +1045,7 @@ is also positive.
    (pos? x)))
 
 (def faulty-sqrt
-  (wrap-1 (make-contract-1 gt0? gt0?)
+  (wrap-1 (make-contract gt0? gt0?)
           (fn [not-used] -1)
           "Post condition violated" "Pre condition violated"))
 
@@ -1102,7 +1101,7 @@ only accept functions which take and return  numbers greater than 0.
   ;;; (bigger-than-0 -> bigger-than-0) -> any
 (defn ff-save [f] (dosync (ref-set
                            ff-saved
-                           (wrap-1 (make-contract-1 gt0? gt0?)
+                           (wrap-1 (make-contract gt0? gt0?)
                                  f
                                  "p"
                                  "n")) ))
@@ -1205,7 +1204,7 @@ of Figure \ref{lst:wrap}.
 #+latex: \label{lst:ff-use2}
 #+srcname: label
 #+begin_src clojure :tangle yes :exports code
-(defcontract-1 ff-save-2 f (make-contract-1 gt0? gt0?)
+(defcontract-1 ff-save-2 f (make-contract gt0? gt0?)
   (dosync (ref-set ff-saved f)))
 
 (defcontract-1 ff-use-2 n gt0?
@@ -1251,7 +1250,7 @@ Using this macro we can simplify the definitions of =ff-use= and
 
 
 (defcontract-2 ff-save-3 f 
-  (make-contract-1 gt0? gt0?)
+  (make-contract gt0? gt0?)
   lenient
   (dosync (ref-set ff-saved f)))
 
@@ -1419,7 +1418,7 @@ symbols.
 
 
 #+latex: \begin{listing}[H]
-#+latex: \caption{Supporting functions for attach-contracts-1}
+#+latex: \caption{Supporting functions for \texttt{attach-contracts-1}}
 #+BEGIN_SRC clojure :tangle yes :exports code
 (defn wrap-arg-contract [arg-contract]
   "Extracts the contract from the pair arg-contract and returns
@@ -1447,7 +1446,7 @@ symbols.
 
 (def faulty-sqrt-2
   (wrap-arg-contract (list (fn [not-used] -1)
-                           (make-contract-1 [gt0?] gt0?))))
+                           (make-contract [gt0?] gt0?))))
 
 (deftest faulty-sqrt-2-test
   (is (thrown-with-msg? java.lang.Exception #"Post condition"
@@ -1491,7 +1490,7 @@ Clojure's pretty print and macroexpand functions to see the code
 which is generated at compile time:
 
 #+latex: \begin{listing}[H]
-#+latex: \caption{Macro expansion of attach-contracts-1}\label{macroexpand} 
+#+latex: \caption{Macro expansion of \texttt{attach-contracts-1}}\label{macroexpand} 
 #+BEGIN_SRC clojure :tangle no :exports code 
 (clojure.pprint/pprint (macroexpand-1 '
                         (attach-contracts-1
@@ -1543,7 +1542,7 @@ number greater than zero.
 (defn- invoke-two-arg [f]
   (f 1 2))
 
-(def two-arg-contract (make-contract-1 [lenient lenient] gt0?))
+(def two-arg-contract (make-contract [lenient lenient] gt0?))
 
 (attach-contracts-1 two-arg-c
                     invoke-two-arg
@@ -1803,35 +1802,73 @@ documenting.  Eiffel provides a short form documentation tool which
 includes contract information.  Clojure has the =doc= function which
 will print the documentation meta data associated with a function.
 We  provide a  =contracts= function which will print
-=:contract= meta data of the given function.
+=:contracts= meta data of the given function.
 
 #+begin_src clojure :tangle yes :exports code
-(defn contracts [f]
-    (println " " (:contract (meta f))))
+(defn contracts
+  "Prints any contract documentation associated with `f'."
+  [f]
+  (print (:contracts (meta f))))
+
+
 #+end_src
 
-We now have to store some useful information in the =:contract= meta
+We now have to store some useful information in the =:contracts= meta
 data.  Requesting a developer to perform additional documentation
 tasks is typically an unrewarding activity so we make use of the
-contract definitions passed in to the call =attach-contracts-1= and
-simply store these in string form as function meta data.  To do this
-we use the reader meta data macro =#^=.
+names  of the contracts themselves.  To do this we use a call
+to =vary-meta= to associate the stringified version of the contracts
+with the contracts meta-data of or function.  The 
 
 #+begin_src clojure :tangle yes :exports code
+(defn contract-name [f]
+  (let [name (:name meta f)]
+    (if name
+      name
+      "name unknown")))
+
+(defn dom-rng-contracts
+  "Extract domain and range contracts from `c', assumed to be built
+   with `make-contract'."
+  [c]
+  (let  [dom-contracts (map contract-name (dom c))
+         dom-as-str (map (fn [s] (format "%s " s)) dom-contracts) 
+         rng-contract (contract-name (rng c))]
+    (format
+     "Domain contracts: %s\nRange contract %s\n"
+     (apply str dom-as-str)
+     rng-contract)))
+
+(defn decompose-contract
+  "Deconstructs the contract block passed in to it, returning concatenated
+   string versions of the components."
+  [c]
+  (cond
+    (vector? c) (apply str  (map decompose-contract c))
+    (map? c) (format "Higher-order parameter:\n %s\n" (dom-rng-contracts c))
+    (function? c) (format "First-order parameter: %s\n\n" (contract-name c))))
+
+
 (defmacro attach-contracts [newname func contracts post-condition]
   "Create a new function definition `newname' which calls
   `func' with the args stored in arg/contracts wrapped in
    the corresponding contract."
-  (let [args (vec (map gensym  (range (count contracts))))]
-    `(defn ^#{:contracts (str ~contracts)} 
-       ~newname ~args
-       (binding [*contracted-function-args* ~args]
-         (let [wrapped-args# 
-               (map wrap-arg-contract (zip ~args ~contracts))]
-           (wrap (vector ~post-condition)
-                   (apply ~func wrapped-args# )
-                   "Post condition of return value"
-                   "Pre condition of return value"))))))
+  (let [args (vec (map gensym  (range (count contracts))))
+        contract-docs (decompose-contract contracts)]
+    `(def ~newname
+       (vary-meta
+        (fn ~args 
+          (let [wrapped-args# 
+                (map wrap-arg-contract (zip ~args ~contracts))]
+            (wrap (vector ~post-condition)
+                  (apply ~func wrapped-args# )
+                  "Post condition of return value"
+                  "Pre condition of return value")
+            ))
+        assoc
+        :contracts
+        ~contract-docs))))
+
 #+end_src
 
 
@@ -2139,7 +2176,7 @@ additional post-conditions, hence the use of =lenient=.
 
 
 (def setup-request-contract
-  (make-contract-1
+  (make-contract
    [ip-address? sip-uri?]
    call-setup-request-result?))
 
@@ -2294,7 +2331,11 @@ the language I have resisted this. I believe the idiomatic Clojure solution
 is the use of unit tests, which initially demonstrated the
 problem, and a better knowledge of the language to make root cause
 determination quicker.  Coming from a background of static typed
-languages, this still feels somewhat fragile.
+languages, this still feels somewhat fragile.  One potentially
+fruitful area of improvement is the structure of the contracts
+themselves.  The nested maps and vectors prove somewhat cumbersome to
+handle and would benefit from either a library of helper functions to
+manipulate them, or an alternative, more convenient, data type representation.
 
 
 
@@ -2560,6 +2601,14 @@ work on this dissertation has piqued my interest in type systems
 which I now intend to investigate a little further.
 
 ** Summary
+
+We have surveyed the existing state of Design by Contract in both
+object-oriented and functional languages.  With this background we
+have developed a Clojure framework which supports Design by Contract
+on higher order functions.  Having implemented a worked example based
+on a real world scenario, we have reflected on the strengths and
+weaknesses of the work and identified a number of areas of
+investigation.
 
 \pagebreak
 \bibliographystyle{alpha}
