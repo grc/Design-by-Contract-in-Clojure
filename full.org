@@ -14,7 +14,7 @@
 
 #+LaTeX_HEADER: \usepackage{upquote} \usemintedstyle{bw} 
 #+LaTeX_HEADER: \usepackage[nottoc,numbib]{tocbibind}
-#+BEGIN_LATEX:
+#+BEGIN_LATEX
 \renewcommand\listoflistingscaption{Program listings}
 \newenvironment{changemargin}[2]{%
   \begin{list}{}{%
@@ -26,7 +26,7 @@
     \setlength{\parsep}{\parskip}%
   }%
   \item[]}{\end{list}}
-#+END_LATEX:
+#+END_LATEX
 
 # If we set the twoside option to article then the following will
 # cause each section to appear on an odd numbered page.
@@ -35,39 +35,34 @@
 # \def\section{\cleardoublepage\stdsection}  
 
 # Start each section on a new page
+#+BEGIN_LATEX
 \let\stdsection\section
 \renewcommand\section{\clearpage\stdsection}
 
 
-\hypersetup{
-    colorlinks,%
-    citecolor=black,%
-    filecolor=black,%
-    linkcolor=black,%
-    urlcolor=black,
-    pdfauthor=Giles Chamberlin,
+\hypersetup{ colorlinks,% citecolor=black,% filecolor=black,%
+    linkcolor=black,% urlcolor=black, pdfauthor=Giles Chamberlin,
     pdfsubject=Submission for M.Sc. in Software Engineering
-    pdftitle=Design by Contract in Clojure
-}
+    pdftitle=Design by Contract in Clojure }
 
-#+LATEX_HEADER:
+
 
 \thispagestyle{empty}
 
+#+END_LATEX
 #+begin_src sh :exports none
   BIBINPUTS=/Users/grc/dissertation/:$BIBINPUTS
   export BIBINPUTS
 #+end_src
-
+#+BEGIN_LATEX
 \vfill
-#+BEGIN_LATEX:
 \begin{changemargin}{+1cm}{+1cm}
 \begin{center}
 A dissertation submitted in partial fulfilment of the requirements for
 the degree of Master of Science in Software Engineering.
 \end{center}
 \end{changemargin}
-#+END_LATEX:
+
 \clearpage
 
 \begin{abstract}
@@ -75,7 +70,7 @@ the degree of Master of Science in Software Engineering.
 Programming in a concurrent world is hard.  There is a lot of work
 being undertaken to provide software engineers with tools to help
 develop correct software.  One area seeing a lot of interest is that
-of functional programming - writing software free of side effects
+of functional programming --- writing software free of side effects
 that can thus execute concurrently with no issues.  The Clojure
 language, based on the Java Virtual Machine, is one example of this
 approach.
@@ -84,7 +79,8 @@ approach.
 been much examined as a means of producing more reliable computer
 programs.  This dissertation reviews the literature on Design by
 Contract, including its application to functional programming.  A framework is 
-developed to provide support for Design by Contract in Clojure. This framework 
+developed to provide Clojure with support for Design by Contract using run-time 
+assertion checking. This framework 
 is then used to add contract support to a worked example.
 \vfill
 \noindent The author confirms that this dissertation does not contain material
@@ -94,10 +90,14 @@ stated.
 \end{abstract}
 
 \pagebreak
-[TABLE-OF-CONTENTS]
+#+END_LATEX
+#+TOC: headlines 2
 
+#+BEGIN_LATEX
 \listoflistings
 \pagebreak
+#+END_LATEX
+
 * Introduction
 
 Writing a correctly functioning computer program is hard.  And it's
@@ -105,7 +105,7 @@ not going to get easier.  In a programmers' arms race a number of
 tools and techniques have evolved which help provide a degree of
 control over the burgeoning complexity of the systems we are creating.
 In response, the systems we are trying to build have become still more
-complicated: all the easy problems have been solved.
+complicated as all the easy problems have been solved.
 
 One area of increasing complexity is the growth of parallelism in many
 modern systems.  This is encouraged by the fact that CPU's are no
@@ -142,9 +142,9 @@ member of the Lisp family of languages, it uses the Java Virtual
 Machine and so can take advantage of the plethora of Java libraries.
 
 In this dissertation we first review the background to Design by
-Contract, its inception, current implementations and extension in to
+Contract, its inception, current implementations and extension into
 the world of functional programming.  Having outlined design goals for
-our framework we will look in some detail at two possible framework
+our framework we will look in some detail at two possible
 implementations and compare their benefits.  We then study a worked
 example to see how our preferred framework could be used in practice.
 A section on discussion provides us an opportunity to reflect on the
@@ -178,7 +178,7 @@ introduced the term "Design by Contract" to much of the software
 engineering community.  In his book, Meyer lays out his views on how
 to develop robust software and in the process introduces a new
 object-oriented language, Eiffel, which embodies those design
-principles. One of the key concepts is the use of pre and post
+principles. One of the key concepts is the use of pre- and post
 conditions to provide a contract between the caller and provider of a
 method.  In the event of contract violation blame is then assigned
 depending upon which condition was violated.
@@ -230,7 +230,7 @@ and outputs from, the functions.
  
 Inheritance and the Liskov Substitution Principle (LSP) \cite{lsp} are
 supported through the respective weakening and strengthening of pre
-and post conditions in derived classes. A derived method may require
+and post-conditions in derived classes. A derived method may require
 no more, and promise no less, than its parent. 
 
 Eiffel contracts are implemented in terms of assertions, similar to
@@ -240,7 +240,7 @@ parameter values.  Function calls are permitted though Meyer argues
 \cite[p.\ 402]{oosc} that such functions should be kept simple and
 "beyond reproach".  Practically speaking this means that significant
 side effects must be avoided.  Significant? The practice of adding
-debug print statements is wide spread, particular in the case of a
+debug print statements is wide spread, particularly in the case of a
 failed assertion.  Prohibiting this sort of side effect would be
 unhelpful, but those genuinely effecting program state should be
 avoided.
@@ -252,7 +252,7 @@ object neither invoke the contracts nor trigger invariant checks.
 In line with Parnas' assertion that contracts should be readily
 available to the developer, Meyer provides a tool which generates a
 short form of his class descriptions; essentially an interface
-specification.  This short form includes the pre and post conditions.
+specification.  This short form includes the pre- and post-conditions.
 
 
 
@@ -260,10 +260,10 @@ specification.  This short form includes the pre and post conditions.
 
 The Java Modelling Language (JML) \cite{jml} provides a Design by
 Contract framework for Java.  Much of the functionality is similar to
-that introduced in Eiffel: pre and post conditions are provided for
+that introduced in Eiffel; pre- and post-conditions are provided for
 class methods and inheritance is supported through the respective
-weakening and strengthening of those pre and post conditions. The
-exact nature of the refinement of pre and post conditions differs from
+weakening and strengthening of those pre- and post-conditions. The
+exact nature of the refinement of pre- and post-conditions differs from
 that in Eiffel \cite{toth10}.  
 
 Listing \ref{lst-jml} is an example taken from introductory paper to
@@ -272,16 +272,16 @@ annotations embedded in the comments of the Java program \cite{jmlc}.
 These comments are then processed by =jmlc=, a pre-processor, which
 generates a wrapper class to enforce the contract and delegates the
 implementation to the native java code.  The use of annotated comments
-simplifies the implementation of =jmlc=: it just has to pre-process
+simplifies the implementation of =jmlc=; it just has to pre-process
 the annotations and generate legal java which is then compiled as
 usual.  Unfortunately it has the disadvantage that the usual
-productivity tools associated with a modern development environment:
-syntax highlighting, auto-completion etc. are no longer available. To
-the tool, the JML markup appears to be simply comments and is
-processed as such.
+productivity tools associated with a modern development environment,
+such as syntax highlighting and auto-completion, are no longer
+available. To the tool, the JML markup appears to be simply comments
+and is processed as such.
 
 #+latex: \begin{listing}[H]
-#+LATEX: \caption{JML pre and post conditions}\label{lst-jml}
+#+LATEX: \caption{JML pre- and post-conditions}\label{lst-jml}
 #+begin_example
 
 import org.jmlspecs.models.JMLDouble;
@@ -337,7 +337,7 @@ Parnas' work has proved useful in the procedural world.  Its utility
 is severely reduced in functional programming paradigms where
 functions are passed around as first class objects.  It is no longer
 possible to simply examine the arguments to a function at call time to
-know if they satisfy the pre condition.
+know if they satisfy the pre-condition.
 
 
 Although the absence of higher-order contracts has been noted by the
@@ -351,7 +351,7 @@ processing; again a candidate for high order contract checking.
 
 Racket, previously known as PLT Scheme, has taken on the idea of
 contracts. Contracts in Racket are separated from the function 
-definition in a module exports Section \cite{racket}. This allows
+definition in a module exports section \cite{racket}. This allows
 contracts to be enforced only at module boundaries.  Calls to a
 function within the module do not undergo contract checking.  This
 follows the premise of Eiffel \cite[p.\ 366]{oosc}.
@@ -398,13 +398,13 @@ wrap = fix wrap \ ct \ x \ p \ n
 #+end_example
 #+latex: \end{listing}
 
-\cite{hof} also investigates blame assignment.  
-useful.  \cite{hof} introduces the concept of positive and negative
-positions in the \texttt{wrap} function.  Initially these
-are applied to caller and called function. Should a first order
-contract fail the positive location is blamed.  Higher-order contracts
-have the positive and negative locations swapped before the recursive
-application of \texttt{wrap}.
+Findler and Felleisen \cite{hof} also investigates blame assignment
+and introduces the concept of positive and negative positions in the
+\texttt{wrap} function.  Initially these are applied to caller and
+called function. Should a first order contract fail the positive
+location is blamed.  Higher-order contracts have the positive and
+negative locations swapped before the recursive application of
+\texttt{wrap}.
 
 
 # higher-order contracts described in
@@ -446,7 +446,7 @@ Clojure, first introduced in 2007, is according to its inventor
 
 I chose to use Clojure as the platform for my investigation of Design
 by Contract in part because of Lisp's flexibility for such experiments
-and in part through a desire to get to know Clojure better: my
+and in part through a desire to get to know Clojure better. My
 professional work developing video conferencing infrastructure was
 repeatedly showing the need for multi-core concurrency and the ability
 to integrate easily with a large body of sophisticated and specialised
@@ -585,7 +585,7 @@ responsible for parsing the input, prior to evaluation, has innate
 knowledge of these structures, allowing them to be used in the macro
 system described later.
 
-Maps, similar to Python's dictionaries, are a sequence of key value
+Maps, similar to Python's dictionaries, are a sequence of key/value
 pairs.  
 
 #+begin_src clojure
@@ -702,20 +702,20 @@ an attractive language in which to experiment when we wish to modify
 the behaviour of the language itself.
 
 
-*** Clojure's built in pre and post conditions
+*** Clojure's built in pre- and post-conditions
 
 The usual way of introducing a function into a Clojure environment,
-=defn= is a macro which can accept pre and post conditions..
+=defn= is a macro which can accept pre- and post-conditions..
 #+begin_src clojure :exports none
 (macroexpand '(defn checked-java-sqrt 
-                "Pre Condition checks prior to calling underlying function"
+                "Pre-condition checks prior to calling underlying function"
                 [n]
                 {:pre [(number? n) (>= n 0)]}
                 (Math/sqrt n))) 
 #+end_src
 
 Macro expansion, prior to compilation, wraps the body of the =defn= in
-assertions validating the pre and post conditions.  It is this
+assertions validating the pre- and post-conditions.  It is this
 augmented body which is compiled to form the function. 
 
 
@@ -726,7 +726,7 @@ version of =java-sqrt=
 #+srcname: checked-java-sqrt
 #+begin_src clojure
 (defn checked-java-sqrt 
-  "Pre Condition checks prior to calling underlying function"
+  "Pre-condition checks prior to calling underlying function"
   [n]
   {:pre [(number? n) (>= n 0)]}
   (Math/sqrt n))
@@ -742,7 +742,7 @@ Omitting meta data, macro expansion of =checked-java-sqrt= yields:
 #+end_src
 
 
-Should the pre condition be violated, a Java =AssertionError=
+Should the pre-condition be violated, a Java =AssertionError=
 exception will be thrown which can be handled in Clojure in the normal
 manner:
 
@@ -771,14 +771,15 @@ Assert failed: (>= n 0)
 
 The demotion of the conditions to generalised assertions loses the
 ability to extract the conditions for use in Eiffel style short form
-descriptions. Pre or post condition violation can be inferred from
+descriptions. Pre- or post-condition violation can be inferred from
 which assertion fails and blame assigned through inspection of the
-call stack obtained via =getStackTrace= in the case of pre condition
+call stack obtained via =getStackTrace= in the case of pre-condition
 failure. Though usually robust, it is possible for the JVM to omit
 stack frames in order to optimise execution so a violating caller may
-not appear in the list of blame candidates.
-
-
+not appear in the list of blame candidates.  More importantly we are
+limited to providing first-order checks on the values, a severe
+limitation in a functional world where higher-order parameters are a
+frequent occurrence.
 
 
 
@@ -791,7 +792,7 @@ concurrently requires some form of concurrency control.  Typically
 this concurrency control takes the form of a locking strategy: before
 modifying mutable data the method must acquire a lock, releasing it
 when the operation is complete.  Improper locking strategies --- method
-1 acquires lock A, then lock B, method 2 B then A --- can result in
+1 acquires lock A, then lock B;  method 2 B, then A --- can result in
 deadlock.  More fundamentally, lock based strategies are not
 composable \cite{Harris}: 
 \begin{quote} 
@@ -815,16 +816,16 @@ transactional references: =ref='s.  Modifications to the data must be
 wrapped in a transaction and may be protected by a validator function.
 This validator function provides another point at which system
 integrity may be verified.  When the validator is called the nature of
-the transaction is unknown so method pre and post conditions are
+the transaction is unknown so method pre- and post-conditions are
 inappropriate but this does provide an ideal point for maintaining
 data invariants.
 
 * Design goals for a Design by Contract framework
 
-Clojure provides Eiffel like pre and post condition checking through a
+Clojure provides Eiffel like pre- and post-condition checking through a
 simple assertion mechanism.  But as a functional programming language,
-function arguments are often functions themselves.  Simple pre and
-post condition assertions can not verify these functional arguments as
+function arguments are often functions themselves.  Simple pre- and
+post-condition assertions can not verify these functional arguments as
 they can only be checked when invoked.  
 
 In order to increase the ability to use Design by Contract techniques
@@ -874,7 +875,7 @@ contract checker.
 
 
 Should the contract fail, blame will be assigned based on whether the
-pre or post condition was responsible.  An error message can be
+pre- or post-condition was responsible.  An error message can be
 emitted with the culprit identified appropriately.
 
 #+srcname: preamble
@@ -985,10 +986,10 @@ functions shown in Listing \ref{contract-utility}.  We need to select
 a data structure to represent the contracts.  As is idiomatic in
 Clojure development, the first data structure of choice is =map=.
 Here we define two keys, =:dom= and =:rng= to hold the domain and
-range (pre and post conditions).  We provide two implementations of
+range (pre- and post-conditions).  We provide two implementations of
 =make-contract=: =make-contract/2= is a simple shorthand version
 which calls =make-contract/4= with default values of the message to
-be used in the case of pre or post condition failure.
+be used in the case of pre- or post-condition failure.
 
 #+latex: \begin{listing}[H]
 #+latex: \caption{Contract utility functions}\label{contract-utility}
@@ -997,8 +998,8 @@ be used in the case of pre or post condition failure.
   ([pre post]
      (make-contract pre
                       post
-                      "Pre condition failed"
-                      "Post condition failed"))
+                      "Pre-condition failed"
+                      "Post-condition failed"))
   ([pre post pre-message post-message]
      {:dom pre :rng post
       :pre-message pre-message
@@ -1047,12 +1048,12 @@ is also positive.
 (def faulty-sqrt
   (wrap-1 (make-contract gt0? gt0?)
           (fn [not-used] -1)
-          "Post condition violated" "Pre condition violated"))
+          "post-condition violated" "Pre-condition violated"))
 
 (deftest faulty-sqrt-test
-  (is (thrown-with-msg? java.lang.Exception #"Post condition"
+  (is (thrown-with-msg? java.lang.Exception #"Post-condition"
         (faulty-sqrt 1)))
-  (is (thrown-with-msg? java.lang.Exception #"Pre condition"
+  (is (thrown-with-msg? java.lang.Exception #"Pre-condition"
         (faulty-sqrt 0))))
 #+end_src
 #+latex: \end{listing}
@@ -1077,8 +1078,8 @@ which accept a wider category of inputs.
 =faulty-sqrt= demonstrates blame assignment, allowing the user of a
 function to determine whether it is the called or calling function at
 fault. Calling =(faulty-sqrt 1)= will throw an exception declaring
-that the post condition was violated, a fault in the called function,
-whilst =(faulty-sqrt 0)= will declare that the pre condition has been
+that the post-condition was violated, a fault in the called function,
+whilst =(faulty-sqrt 0)= will declare that the pre-condition has been
 violated, with the caller at fault.  This is demonstrated by the test
 harness contained within the =deftest= form.  
 
@@ -1222,9 +1223,9 @@ of Figure \ref{lst:wrap}.
 As well as checking the argument to the function =fn-name= defined
 using =defcontract-1=, we need to verify the return value from the
 function.  There are two possible approaches to this: we could use
-Clojure's pre-existing post condition check, =:post= discussed previously, or
+Clojure's pre-existing post-condition check, =:post= discussed previously, or
 we could use the =wrap-1= function developed above.  The use of =:post=
-checks would limit us to simple flat asserts about the return value,
+checks would limit us to simple flat assertions about the return value,
 whereas we would like to still have the ability to check higher-order
 function returns.  Accordingly we will use =wrap-1= to verify return
 values from functions defined using =defcontract-2=
@@ -1240,13 +1241,13 @@ Using this macro we can simplify the definitions of =ff-use= and
 #+begin_src clojure :tangle yes :export code
 (defmacro defcontract-2 [fn-name a c post body]
   (let [wrapped-arg {a `(wrap-1 ~c ~a
-                                "post condition of arg"
-                                "pre condition of arg")} ] 
+                                "post-condition of arg"
+                                "pre-condition of arg")} ] 
     `(defn ~fn-name [~a]
        (wrap-1 ~post 
                ~(clojure.walk/postwalk-replace wrapped-arg body)
-               "Post condition of function return"
-               "Pre Condition of function return"))))
+               "Post-condition of function return"
+               "Pre-condition of function return"))))
 
 
 (defcontract-2 ff-save-3 f 
@@ -1387,8 +1388,8 @@ a simple use and compare the generated code to that of =wrapit= above.
              (map wrap-arg-contract (zip ~args ~contracts))]
          (wrap (vector ~post-condition)
                  (apply ~func wrapped-args# )
-                 "Post condition of return value"
-                 "Pre condition of return value")))))
+                 "Post-condition of return value"
+                 "Pre-condition of return value")))))
 
 
 #+END_SRC
@@ -1449,9 +1450,9 @@ symbols.
                            (make-contract [gt0?] gt0?))))
 
 (deftest faulty-sqrt-2-test
-  (is (thrown-with-msg? java.lang.Exception #"Post condition"
+  (is (thrown-with-msg? java.lang.Exception #"Post-condition"
         (faulty-sqrt-2 1)))
-  (is (thrown-with-msg? java.lang.Exception #"Pre condition"
+  (is (thrown-with-msg? java.lang.Exception #"Pre-condition"
         (faulty-sqrt-2 0))))
 
 
@@ -1512,8 +1513,8 @@ which is generated at compile time:
   (dbc.core/wrap
    (clojure.core/vector lenient)
    (clojure.core/apply add-args wrapped-args__4076__auto__)
-   "Post condition of return value"
-   "Pre condition of return value")))
+   "Post-condition of return value"
+   "Pre-condition of return value")))
 #+END_SRC
 #+latex: \end{listing}
 
@@ -1558,7 +1559,7 @@ number greater than zero.
 
 
 As we can see from the test harness, =+= will satisfy the contract
-whilst =-= fails to maintain the post condition.
+whilst =-= fails to maintain the post-condition.
 
 Compare this with a function which takes two arguments, the second of
 which obeys =two-arg-contract=:
@@ -1608,20 +1609,19 @@ argument vector as shown in Listing \ref{contracts-2}.
                (map wrap-arg-contract (zip ~args ~contracts))]
            (wrap (vector ~post-condition)
                    (apply ~func wrapped-args# )
-                   "Post condition of return value"
-                   "Pre condition of return value"))))))
+                   "Post-condition of return value"
+                   "Pre-condition of return value"))))))
 #+END_SRC
 #+latex: \end{listing}
 
-Unfortunately  we are now halted by our use of higher-order
-contracts: by the time the wrapped returned value of
-=attach-contracts-2= is evaluated, the binding has been exited
-and =*contracted-function-args*= no longer holds the relevant
-argument vector.  We have essentially encountered the problem in the
-C libraries where some functions set =errno= with important
-information.  If you don't check in time it's lost.  As our design
-ethos revolves around delayed evaluation, checking in time is not
-possible.
+Unfortunately we are now halted by our use of higher-order
+contracts. By the time the wrapped returned value of
+=attach-contracts-2= is evaluated, the binding has been exited and
+=*contracted-function-args*= no longer holds the relevant argument
+vector.  We have essentially encountered the same problem as in the C
+libraries where some functions set =errno= with important information.
+If you don't check in time it's lost.  As our design ethos revolves
+around delayed evaluation, checking in time is not possible.
 
 This restricts our use of post-conditions to general statements about
 the return value and excludes the ability to make input dependent
@@ -1630,14 +1630,14 @@ values may still be verified using Clojure's existing mechanisms.
 
 ** Fault location
 When a contract fails we wish to know where the fault lies: with the
-function implementation or the caller of the function. In this
+function implementation or the caller of the function? In this
 section we discuss first how to ascertain which is the guilty party,
 then to provide a trail of evidence showing where in the code base
 the mistake can be found.
 
 As we discussed in Section \ref{initial} the =wrap= function of
 Findler and Felleisen provides a means of distinguishing between
-calling and called party: the blame alternates between the two as we
+calling and called party. The blame alternates between the two as we
 recurse through calls to =wrap= for higher-order functions.  We now
 know which side of the function boundary the blame lies on, but we
 wish to determine the guilty party more accurately.
@@ -1721,12 +1721,13 @@ access the function call stack as shown in Listing \ref{stacktrace}
 #+end_src
 #+latex: \end{listing}
 
-A brief explanation of Clojure's syntax here: =(.method object args)=
-is syntactical sugar for a Java call =object.method(args)= so the
-=callers= function above creates a new =Throwable= object and
-populates its stack trace: a typical Java solution to the problem.
-The final line of =callers= prunes the stack trace, removing function
-calls which are an artefact of the development environment.
+A brief explanation of Clojure's syntax is useful here. =(.method
+object args)= is syntactical sugar for a Java call
+=object.method(args)= so the =callers= function above creates a new
+=Throwable= object and populates its stack trace: a typical Java
+solution to the problem.  The final line of =callers= prunes the stack
+trace, removing function calls which are an artefact of the
+development environment.
 
 For first order contracts this provides a good solution: the contract
 will be evaluated at the same time that it is applied.  In the event
@@ -1862,8 +1863,8 @@ with the contracts meta-data of or function.  The
                 (map wrap-arg-contract (zip ~args ~contracts))]
             (wrap (vector ~post-condition)
                   (apply ~func wrapped-args# )
-                  "Post condition of return value"
-                  "Pre condition of return value")
+                  "Post-condition of return value"
+                  "Pre-condition of return value")
             ))
         assoc
         :contracts
@@ -1992,8 +1993,8 @@ that vector to realised, forfeiting the benefits of laziness.
 My day job is to develop software that forms the infrastructure for a
 video conferencing deployment --- effectively a telephone exchange for
 video conferencing.  In order to test this we use a number of video
-endpoints (analogous to a telephone) to place calls in to the system.
-Interoperability between our equipment and taht of the various endpoint
+endpoints (analogous to a telephone) to place calls into the system.
+Interoperability between our equipment and that of the various endpoint
 manufacturers is an important requirement so we test using a range of
 endpoints.
 
@@ -2009,17 +2010,17 @@ call control for an abstract endpoint type. The framework can then be
 used in the interop test framework for the product under development.
 This will require the ability to set up, tear down and answer calls.
 Basic state querying will also be required: is the endpoint in a call
-or not.  This is a simplified approach for the purposes of this
+or not?  This is a simplified approach for the purposes of this
 dissertation --- our current test system is significantly more involved,
 checking audio and video codec selection, call quality and a number of
 other areas.  As new endpoint types are acquired in the test lab,
-device specific plugin functions can be written.  These may be passed
+device specific plug-in functions can be written.  These may be passed
 in to function calls in the abstract framework for later invocation,
 thus adding support for the new device to the interop test framework.
 This provides a functional programming analogue for inheritance in
 object-oriented programming.
 
-As the plugin functions will be written over a period of time by a
+As the plug-in functions will be written over a period of time by a
 variety of people it is important that the required interface to the
 abstract call control framework is well defined.  This requirement for
 interface definition for later users shows an important distinction
@@ -2029,11 +2030,11 @@ demonstrate that the abstract framework functions according to its
 specification it places no constraint on the later writer of a
 function supporting a new device.  The test framework can provide
 additional documentation of the intended behaviour and as such is
-valuable, though only if the plugin writer pays attention to said
+valuable, though only if the plug-in writer pays attention to said
 documentation.
 
-By providing a contract on the functions taking plugins as a parameter
-we provide not only documentation as to expected plugin arguments and
+By providing a contract on the functions taking plug-ins as a parameter
+we provide not only documentation as to expected plug-in arguments and
 return values, but also enforcement of that expectation.
 
 
@@ -2053,7 +2054,7 @@ possible return values by the set of keywords
 ={:not-found :ok :error}=.
 
 We now have the basis of a contract that the framework can place on
-plugin functions.  The plugin should take two parameters, one of
+plug-in functions.  The plug-in should take two parameters, one of
 which is an IP address, the other a SIP URI.  It should return one of
 the given values.  We will therefore require predicates to ascertain
 the validity of the contract.
@@ -2091,21 +2092,22 @@ the validity of the contract.
 
 
 We now need to provide the abstract call setup request function. Two
-possible implementations come to mind: either take a map of endpoints
-and setup functions as an arguments, or refer to a global value. In
-keeping with Clojure's functional nature we choose the former. Our
-abstract functions, of which =call-setup-request= is the first, will
-therefore take a map of ={type, function}= and an endpoint type as
-their first arguments.  The author of a plugin will be required to
-register his function in that map, using our registration function.
+possible implementations come to mind: we could either take a map of
+endpoints and setup functions as an argument, or refer to a global
+value. In keeping with Clojure's functional nature we choose the
+former. Our abstract functions, of which =call-setup-request= is the
+first, will therefore take a map of ={type, function}= and an endpoint
+type as their first arguments.  The author of a plug-in will be
+required to register his function in that map, using our registration
+function.
 
 #+latex: \begin{listing}[H]
 #+latex: \caption{Call setup request interface} 
 #+begin_src clojure :tangle yes :exports code
 
 (defn call-setup-request [function-map endpoint-type endpoint url]
-  (let [plugin-fn (endpoint-type function-map)]
-    (plugin-fn endpoint url)))
+  (let [plug-in-fn (endpoint-type function-map)]
+    (plug-in-fn endpoint url)))
 
 #+end_src
 #+latex: \end{listing}
@@ -2233,10 +2235,10 @@ the specified contract on setup function implementations.
 #+End_src
 #+latex: \end{listing}
 As can be seen from the test suite, should the concrete implementation
-be invoked with invalid arguments, a pre condition violation is
-indicated, exonerating the plugin developer.  In the case of
-=faulty-setup-request=, a post condition is indicated, blaming the
-developer of the plugin for the error.
+be invoked with invalid arguments, a pre-condition violation is
+indicated, exonerating the plug-in developer.  In the case of
+=faulty-setup-request=, a post-condition is indicated, blaming the
+developer of the plug-in for the error.
 
 In this section we have considered a real world application of
 contracts on higher-order functions.  We wished to allow the
@@ -2478,7 +2480,7 @@ usage.
 
 ** The current state of Design by Contract 
 
-As we have seen, Clojure has basic support for pre and post condition
+As we have seen, Clojure has basic support for pre- and post-condition
 checking, and there are some enthusiastic blogs \cite{onclojure-blog},
 \cite{objectcommando-blog} commenting on the possibilities. But
 despite this, current practice does not extend to significant use of
@@ -2557,12 +2559,12 @@ the same care as the original language.
 
 
 ** Possible future developments
-*** Post conditions and exceptions
-The post condition handling we have considered so far is limited to
+*** Post-conditions and exceptions
+The post-condition handling we have considered so far is limited to
 the case of a normal return from the function.  As we have seen,
 Clojure integrates tightly with Java and can throw Java exceptions or
-call Java code which in turn throws an exception.  We would like to be
-able to impose post condition contracts on this alternative exit.
+call Java code, which in turn throws an exception.  We would like to be
+able to impose post-condition contracts on this alternative exit.
 
 *** Clojure and object-oriented programming 
 
@@ -2582,8 +2584,8 @@ approach which we will consider.
 As there is no implementation inheritance, we can limit our contracts
 to just applying to the definition of the protocol.  A case could be
 made for supporting Liskov Substituion, allowing the protocol
-implementation to strengthen the post conditions or weaken the
-pre conditions.  From a pragmatic view point, the author feels that
+implementation to strengthen the post-conditions or weaken the
+pre-conditions.  From a pragmatic view point, the author feels that
 this would just lead to increased difficulties in usage.  Though a
 programmer should adhere to the defined protocol contract, if in
 practice a weaker contract were implemented it is possible that the
@@ -2616,72 +2618,4 @@ investigation.
 
 
 
-* Notes :noexport:  First order
-contracts are flat assertions.
 
-what do we do about functions that take more than one parameter?
-Need to work out some use of =partial= to give us what we need.
-Current post condition check is an ugly special case.
-
-Same problem applies to function args that are fns of more than one
-arg.  This must be symmetric surely.
-
-
-
-
-
-** Existing work
-
-There's a contracts library at http://www.fogus.me/fun/trammel/docs.html
-
-**  Runtime vs Compile time contract assignment
-
-
-
-Is there any benefit in using hooks to give the ability to set contracts at run time?
-
-
-
-
-
-
-
-
-
-
-
-
-MSFT .NET http://research.microsoft.com/en-us/projects/contracts/
-
-
-
-
-
-
-Code Contracts User Manual
-Microsoft Corporation January 8, 2012
-
-
-
-
-Inability to make contracts plugin to function.  Flies againdt
-modularity argument of "Why Functional Programming matters", Hughes 1990
-
-
-
-
-#clojure: <2012-08-03 Fri> 
-<ohpauleez> 1.)
-People move code around like clay - they don't quite think as
-	    far ahead or careful as someone like Rich might
-<ohpauleez> it's hard to come up with the constraints of a system that you
-	    yourself aren't even sure about  [16:19]
-<ohpauleez> 2.) Creating contraints on domain input and output takes practice,
-	    just like writing good tests
-<ohpauleez> BUT
-<ohpauleez> you end up capturing these domains in your tests anyway, you might
-	    as well enforce them and program defensively
-<ohpauleez> Programming to an interface instead of an implementation helps to
-	    avoid pointless dependencies between calling pieces of code
-
-Desig
