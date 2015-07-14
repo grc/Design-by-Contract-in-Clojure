@@ -1,1 +1,10 @@
-M.Sc. Dissertation work
+Dissertation submission for an M.Sc. in Software Engineering from
+Oxford University.
+
+The dissertation looks at the implementation of a design by contract
+framework for Clojure.  There's a lot of emphasis on providing
+contract support for high order functions.
+
+The dissertation is produced as a literate program in emacs' org-mode.
+Tangling the org files produces the clojure source files whilst org's
+LaTeX export is used to produce the submitted pdf file.
